@@ -1,0 +1,14 @@
+const express = require("express");
+const auth = require("../../middleware/auth");
+const validate = require("../../middleware/validation");
+const { requireBusinessMembership } = require("../../middleware/authorization");
+const { requirePermission, requireManagementRole } = require("../../middleware/permission");
+const c = require("./calendar-account.controller");
+const v = require("./calendar-account.validator");
+const router = express.Router();
+router.use(auth);
+router.get("/business/:businessId", v.listValidator, validate, requireBusinessMembership, requirePermission("calendar.accounts.view"), c.list);
+router.post("/business/:businessId/connect", v.connectValidator, validate, requireBusinessMembership, requirePermission("calendar.accounts.manage"), c.connect);
+router.get("/callback", c.callback);
+router.delete("/business/:businessId/:accountId", [...v.businessIdValidator, ...v.accountIdValidator], validate, requireBusinessMembership, requireManagementRole, requirePermission("calendar.accounts.manage"), c.disconnect);
+module.exports = router;

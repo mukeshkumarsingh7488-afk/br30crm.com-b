@@ -1,0 +1,13 @@
+const express = require("express");
+const auth = require("../../middleware/auth");
+const validate = require("../../middleware/validation");
+const { requireBusinessMembership } = require("../../middleware/authorization");
+const { requirePermission, requireManagementRole } = require("../../middleware/permission");
+const c = require("./duplicate.controller");
+const v = require("./duplicate.validator");
+const router = express.Router();
+router.use(auth);
+router.post("/business/:businessId/scan", v.detectValidator, validate, requireBusinessMembership, requirePermission("duplicates.manage"), c.detect);
+router.get("/business/:businessId", v.listValidator, validate, requireBusinessMembership, requirePermission("duplicates.view"), c.list);
+router.post("/business/:businessId/:duplicateId/resolve", v.resolveValidator, validate, requireBusinessMembership, requirePermission("duplicates.manage"), c.resolve);
+module.exports = router;

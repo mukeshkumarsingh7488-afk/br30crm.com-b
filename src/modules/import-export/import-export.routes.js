@@ -1,0 +1,14 @@
+const express = require("express");
+const auth = require("../../middleware/auth");
+const validate = require("../../middleware/validation");
+const { requireBusinessMembership } = require("../../middleware/authorization");
+const { requirePermission, requireManagementRole } = require("../../middleware/permission");
+const c = require("./import-export.controller");
+const v = require("./import-export.validator");
+const router = express.Router();
+router.use(auth);
+router.post("/business/:businessId/import", v.createImport, validate, requireBusinessMembership, requirePermission("imports.create"), c.createImport);
+router.post("/business/:businessId/export", v.exportValidator, validate, requireBusinessMembership, requirePermission("exports.create"), c.exportData);
+router.get("/business/:businessId/jobs", v.list, validate, requireBusinessMembership, requirePermission("imports.view"), c.list);
+router.get("/business/:businessId/jobs/:jobId", v.job, validate, requireBusinessMembership, requirePermission("imports.view"), c.get);
+module.exports = router;

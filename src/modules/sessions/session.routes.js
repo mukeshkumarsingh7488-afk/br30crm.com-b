@@ -1,0 +1,11 @@
+const express = require("express");
+const auth = require("../../middleware/auth");
+const validate = require("../../middleware/validation");
+const c = require("./session.controller");
+const v = require("./session.validator");
+const router = express.Router();
+router.use(auth);
+router.get("/me", c.list);
+router.delete("/me/:sessionId", v.sessionId, validate, c.revoke);
+router.post("/me/revoke-all", c.revokeAll);
+module.exports = router;

@@ -1,0 +1,1 @@
+const express=require("express");const rateLimit=require("express-rate-limit");const c=require("./social-lead.controller");const router=express.Router();const limiter=rateLimit({windowMs:60*1000,limit:120,standardHeaders:true,legacyHeaders:false});router.get("/:businessId/:source/verify",c.verify);router.post("/:businessId/:source",limiter,c.ingest);module.exports=router;
