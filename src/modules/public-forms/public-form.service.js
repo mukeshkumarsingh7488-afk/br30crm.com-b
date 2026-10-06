@@ -509,17 +509,35 @@ const getPublicForm = async ({ businessId, slug, tracking = {} }) => {
     throw new ApiError(400, "Invalid business ID.");
   }
 
-  const business = await getBusiness(businessId);
-
   const normalizedSlug = normalizeSlug(slug);
 
-  const form = await PublicForm.findOne({
-    businessId,
-    slug: normalizedSlug,
-    status: "ACTIVE",
-  })
-    .select("-createdBy -updatedBy -settings.internal")
-    .lean();
+  /*
+   * Public form loading is a critical public request. Keep the two
+   * required reads parallel and do not block the response on analytics.
+   * The previous sequential business lookup + form lookup + awaited
+   * view update could hold the browser request for the full client timeout.
+   */
+  const [form, business] = await Promise.all([
+    PublicForm.findOne({
+      businessId,
+      slug: normalizedSlug,
+      status: "ACTIVE",
+    })
+      .select("-createdBy -updatedBy -settings.internal")
+      .maxTimeMS(8000)
+      .lean(),
+    Business.findOne({
+      _id: businessId,
+      status: "ACTIVE",
+    })
+      .select("_id name status")
+      .maxTimeMS(8000)
+      .lean(),
+  ]);
+
+  if (!business) {
+    throw new ApiError(404, "Active business not found.");
+  }
 
   if (!form) {
     throw new ApiError(404, "Public form not found or inactive.");
@@ -528,11 +546,10 @@ const getPublicForm = async ({ businessId, slug, tracking = {} }) => {
   const trackingData = getTrackingData(tracking);
 
   /*
-   * Increment form view counter.
-   * Support ticket creation must NOT happen here because
-   * this endpoint only opens the public form.
+   * Analytics must never delay the public form response. If the analytics
+   * write is temporarily unavailable, the form still opens normally.
    */
-  await PublicForm.updateOne(
+  void PublicForm.updateOne(
     { _id: form._id },
     {
       $inc: {
@@ -541,8 +558,9 @@ const getPublicForm = async ({ businessId, slug, tracking = {} }) => {
       $set: {
         "stats.lastViewedAt": new Date(),
       },
-    }
-  );
+    },
+    { maxTimeMS: 3000 }
+  ).catch(() => {});
 
   const publicUrl = buildPublicUrl({
     businessId,

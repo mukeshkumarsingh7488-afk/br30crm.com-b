@@ -3,7 +3,7 @@ const env = require("./env");
 
 const connectDB = async () => {
   try {
-    const connection = await mongoose.connect(env.mongodbUri);
+    const connection = await mongoose.connect(env.mongodbUri, { serverSelectionTimeoutMS: 10000, connectTimeoutMS: 10000, socketTimeoutMS: 20000 });
 
     console.log(`MongoDB connected: ${connection.connection.host}/${connection.connection.name}`);
   } catch (error) {

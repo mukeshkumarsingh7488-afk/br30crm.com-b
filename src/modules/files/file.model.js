@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const registerModelEvents = require("../../events/registerModelEvents");
 
 const fileSchema = new mongoose.Schema(
   {
@@ -14,6 +15,19 @@ const fileSchema = new mongoose.Schema(
       ref: "User",
       required: true,
       index: true,
+    },
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
+
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
 
     originalName: {
@@ -154,5 +168,7 @@ fileSchema.index({
   businessId: 1,
   folder: 1,
 });
+
+registerModelEvents(fileSchema, "file");
 
 module.exports = mongoose.model("File", fileSchema);

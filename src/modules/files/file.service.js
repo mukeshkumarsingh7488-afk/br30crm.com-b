@@ -73,6 +73,7 @@ const createFile = async ({ businessId, userId, data }) => {
   const file = await File.create({
     businessId,
     uploadedBy: userId,
+    createdBy: userId,
     originalName: data.originalName,
     fileName: data.fileName,
     mimeType: data.mimeType,
@@ -220,6 +221,7 @@ const updateFile = async ({ businessId, userId, fileId, data }) => {
     file.metadata = data.metadata;
   }
 
+  file.updatedBy = userId;
   await file.save();
 
   return file;
@@ -246,6 +248,7 @@ const deleteFile = async ({ businessId, userId, fileId }) => {
   file.status = "DELETED";
   file.deletedAt = new Date();
   file.deletedBy = userId;
+  file.updatedBy = userId;
 
   await file.save();
 

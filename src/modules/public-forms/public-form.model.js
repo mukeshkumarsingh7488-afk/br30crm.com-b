@@ -207,6 +207,6 @@ publicFormSchema.index({
   campaign: 1,
 });
 
-registerModelEvents(publicFormFieldSchema, "public-form");
+registerModelEvents(publicFormSchema, "public-form");
 
 module.exports = mongoose.model("PublicForm", publicFormSchema);
