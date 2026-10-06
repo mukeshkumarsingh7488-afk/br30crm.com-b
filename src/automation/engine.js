@@ -128,9 +128,14 @@ const executeAction = async ({ automation, payload, action }) => {
     const relatedAllowed = ["LEAD", "CONTACT", "COMPANY", "DEAL"];
 
     const assignedTo = cfg.assignedTo || payload.record?.assignedTo || null;
+    const taskTagIds = Array.isArray(cfg.tagIds) ? cfg.tagIds : cfg.tagId ? [cfg.tagId] : [];
 
     if (assignedTo) {
       await validateRef(payload.businessId, "user", assignedTo);
+    }
+
+    for (const tagId of taskTagIds) {
+      await validateRef(payload.businessId, "tag", tagId);
     }
 
     const task = await Task.create({
@@ -143,6 +148,7 @@ const executeAction = async ({ automation, payload, action }) => {
       assignedTo,
       createdBy: payload.actorId,
       relatedTo: relatedAllowed.includes(relatedType) && payload.entityId ? { type: relatedType, id: payload.entityId } : undefined,
+      tags: taskTagIds,
     });
 
     return {

@@ -162,7 +162,7 @@ const getBusinessTags = async (tags, businessId) => {
     throw new ApiError(400, "A maximum of 50 tags can be assigned to an activity.");
   }
 
-  const uniqueTags = [...new Set(tags.map((tag) => String(tag)))];
+  const uniqueTags = [...new Set(tags.map((tag) => String(typeof tag === "object" ? tag?._id || tag?.id || tag?.tagId || "" : tag)).filter(Boolean))];
 
   uniqueTags.forEach((tagId) => {
     validateObjectId(tagId, "tag ID");

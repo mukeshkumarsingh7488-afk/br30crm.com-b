@@ -221,7 +221,7 @@ const getLeadsByBusiness = async (businessId, { page = 1, limit = 10, search, st
 
   const skip = (page - 1) * limit;
 
-  const [leads, total] = await Promise.all([Lead.find(filter).populate("assignedTo", "name email").populate("assignedTeamId", "name slug managerId").sort({ createdAt: -1 }).skip(skip).limit(limit).lean(), Lead.countDocuments(filter)]);
+  const [leads, total] = await Promise.all([Lead.find(filter).populate("assignedTo", "name email").populate("assignedTeamId", "name slug managerId").populate("tags", "name slug color type isActive").sort({ createdAt: -1 }).skip(skip).limit(limit).lean(), Lead.countDocuments(filter)]);
 
   return {
     leads,
@@ -240,6 +240,7 @@ const getLeadById = async (leadId) => {
   const lead = await Lead.findById(leadId)
     .populate("assignedTo", "name email")
     .populate("assignedTeamId", "name slug managerId")
+    .populate("tags", "name slug color type isActive")
     .populate("createdBy", "name email")
     .populate("updatedBy", "name email")
     .populate("convertedContactId", "firstName lastName email phone")
@@ -264,6 +265,7 @@ const getLeadByIdForBusiness = async (leadId, businessId, access = null) => {
   })
     .populate("assignedTo", "name email")
     .populate("assignedTeamId", "name slug managerId")
+    .populate("tags", "name slug color type isActive")
     .populate("createdBy", "name email")
     .populate("updatedBy", "name email")
     .populate("convertedContactId", "firstName lastName email phone")

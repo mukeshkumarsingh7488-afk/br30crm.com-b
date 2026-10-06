@@ -111,7 +111,7 @@ const getBusinessTags = async (tags, businessId) => {
     throw new ApiError(400, "Tags must be an array.");
   }
 
-  const uniqueTags = [...new Set(tags.map((tag) => String(tag)))];
+  const uniqueTags = [...new Set(tags.map((tag) => String(typeof tag === "object" ? tag?._id || tag?.id || tag?.tagId || "" : tag)).filter(Boolean))];
 
   uniqueTags.forEach((tagId) => {
     validateObjectId(tagId, "tag ID");

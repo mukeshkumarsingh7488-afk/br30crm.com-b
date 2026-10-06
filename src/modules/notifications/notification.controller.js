@@ -9,7 +9,7 @@ const createNotification = asyncHandler(async (req, res) => {
     data: req.body,
   });
 
-  return res.status(201).json(new ApiResponse(201, notification, "Notification created successfully"));
+  return ApiResponse.created(res, notification, "Notification created successfully");
 });
 
 const getNotifications = asyncHandler(async (req, res) => {
@@ -24,7 +24,7 @@ const getNotifications = asyncHandler(async (req, res) => {
     limit: req.query.limit,
   });
 
-  return res.status(200).json(new ApiResponse(200, result, "Notifications fetched successfully"));
+  return ApiResponse.success(res, result, "Notifications fetched successfully");
 });
 
 const getUnreadCount = asyncHandler(async (req, res) => {
@@ -34,7 +34,7 @@ const getUnreadCount = asyncHandler(async (req, res) => {
     recipientId: req.query.recipientId,
   });
 
-  return res.status(200).json(new ApiResponse(200, result, "Unread notification count fetched successfully"));
+  return ApiResponse.success(res, result, "Unread notification count fetched successfully");
 });
 
 const getNotificationById = asyncHandler(async (req, res) => {
@@ -44,7 +44,7 @@ const getNotificationById = asyncHandler(async (req, res) => {
     notificationId: req.params.notificationId,
   });
 
-  return res.status(200).json(new ApiResponse(200, notification, "Notification fetched successfully"));
+  return ApiResponse.success(res, notification, "Notification fetched successfully");
 });
 
 const markAsRead = asyncHandler(async (req, res) => {
@@ -54,7 +54,7 @@ const markAsRead = asyncHandler(async (req, res) => {
     notificationId: req.params.notificationId,
   });
 
-  return res.status(200).json(new ApiResponse(200, notification, "Notification marked as read"));
+  return ApiResponse.success(res, notification, "Notification marked as read");
 });
 
 const markAllAsRead = asyncHandler(async (req, res) => {
@@ -63,7 +63,7 @@ const markAllAsRead = asyncHandler(async (req, res) => {
     userId: req.user.userId,
   });
 
-  return res.status(200).json(new ApiResponse(200, result, "All notifications marked as read"));
+  return ApiResponse.success(res, result, "All notifications marked as read");
 });
 
 const archiveNotification = asyncHandler(async (req, res) => {
@@ -73,7 +73,7 @@ const archiveNotification = asyncHandler(async (req, res) => {
     notificationId: req.params.notificationId,
   });
 
-  return res.status(200).json(new ApiResponse(200, notification, "Notification archived successfully"));
+  return ApiResponse.success(res, notification, "Notification archived successfully");
 });
 
 const deleteNotification = asyncHandler(async (req, res) => {
@@ -83,7 +83,7 @@ const deleteNotification = asyncHandler(async (req, res) => {
     notificationId: req.params.notificationId,
   });
 
-  return res.status(200).json(new ApiResponse(200, notification, "Notification deleted successfully"));
+  return ApiResponse.success(res, notification, "Notification deleted successfully");
 });
 
 module.exports = {
