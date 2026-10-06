@@ -173,7 +173,7 @@ const getBusinessTags = async (tags, businessId) => {
       $in: uniqueTags,
     },
     businessId,
-    isDeleted: false,
+    isActive: true,
   }).select("_id businessId");
 
   if (tagDocuments.length !== uniqueTags.length) {

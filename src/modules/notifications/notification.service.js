@@ -2,6 +2,9 @@ const mongoose = require("mongoose");
 const Notification = require("./notification.model");
 const Business = require("../businesses/business.model");
 const BusinessMember = require("../business-members/business-member.model");
+const User = require("../users/user.model");
+const Team = require("../teams/team.model");
+const Automation = require("../automations/automation.model");
 const ApiError = require("../../utils/ApiError");
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
@@ -64,6 +67,12 @@ const createNotification = async ({ businessId, userId, data }) => {
 
   await validateRecipient(businessId, recipientId);
 
+  const creator = await User.findById(userId).select("name firstName lastName email").lean();
+  const member = await BusinessMember.findOne({ businessId, userId, status: "ACTIVE" })
+    .populate("roleId", "name slug")
+    .lean();
+  const creatorName = creator?.name || [creator?.firstName, creator?.lastName].filter(Boolean).join(" ").trim() || creator?.email || null;
+
   const notification = await Notification.create({
     businessId,
     recipientId,
@@ -75,6 +84,13 @@ const createNotification = async ({ businessId, userId, data }) => {
     actionUrl: data.actionUrl || null,
     entityType: data.entityType || null,
     entityId: data.entityId || null,
+    source: data.source || {
+      type: "BUSINESS_MEMBER",
+      id: userId,
+      name: creatorName,
+      email: creator?.email || null,
+      role: member?.roleId?.name || member?.roleId?.slug || null,
+    },
     metadata: data.metadata || {},
     expiresAt: data.expiresAt || null,
     createdBy: userId,
@@ -117,10 +133,64 @@ const getNotifications = async ({ businessId, userId, recipientId, status, type,
 
   const skip = (pageNumber - 1) * limitNumber;
 
-  const [notifications, total] = await Promise.all([Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limitNumber).populate("createdBy", "name email").lean(), Notification.countDocuments(filter)]);
+  const [notifications, total] = await Promise.all([Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limitNumber).populate("createdBy", "name firstName lastName email").lean(), Notification.countDocuments(filter)]);
+
+  const creatorIds = notifications
+    .filter((item) => !item?.source?.type || ["USER", "BUSINESS_MEMBER"].includes(item.source.type))
+    .map((item) => item?.createdBy?._id)
+    .filter(Boolean)
+    .map(String);
+  const uniqueCreatorIds = [...new Set(creatorIds)];
+  const members = uniqueCreatorIds.length
+    ? await BusinessMember.find({ businessId, userId: { $in: uniqueCreatorIds }, status: "ACTIVE" })
+        .populate("roleId", "name slug")
+        .lean()
+    : [];
+  const memberByUser = new Map(members.map((item) => [String(item.userId), item]));
+
+  const teamIds = notifications.filter((item) => item?.source?.type === "TEAM" && item?.source?.id).map((item) => item.source.id);
+  const teams = teamIds.length ? await Team.find({ _id: { $in: teamIds }, businessId }).select("name slug").lean() : [];
+  const teamById = new Map(teams.map((item) => [String(item._id), item]));
+
+  const automationIds = notifications
+    .filter((item) => item?.source?.type === "AUTOMATION" ? item?.source?.id : item?.metadata?.automationId)
+    .map((item) => item?.source?.id || item?.metadata?.automationId)
+    .filter(Boolean);
+  const automations = automationIds.length ? await Automation.find({ _id: { $in: automationIds }, businessId }).select("name").lean() : [];
+  const automationById = new Map(automations.map((item) => [String(item._id), item]));
+
+  const enrichedNotifications = notifications.map((item) => {
+    const source = item.source || {};
+    const creator = item.createdBy || null;
+    const member = creator?._id ? memberByUser.get(String(creator._id)) : null;
+    const team = source.type === "TEAM" && source.id ? teamById.get(String(source.id)) : null;
+
+    const automationId = source.type === "AUTOMATION" ? source.id : item?.metadata?.automationId;
+    if (automationId) {
+      const automation = automationById.get(String(automationId));
+      item.source = {
+        type: "AUTOMATION",
+        id: automationId,
+        name: source.name || automation?.name || "Automation",
+        email: null,
+        role: null,
+      };
+      return item;
+    }
+
+    item.source = {
+      type: source.type || "BUSINESS_MEMBER",
+      id: source.id || creator?._id || null,
+      name: source.name || creator?.name || [creator?.firstName, creator?.lastName].filter(Boolean).join(" ").trim() || creator?.email || team?.name || null,
+      email: source.email || creator?.email || null,
+      role: source.role || member?.roleId?.name || member?.roleId?.slug || null,
+    };
+
+    return item;
+  });
 
   return {
-    notifications,
+    notifications: enrichedNotifications,
     pagination: {
       page: pageNumber,
       limit: limitNumber,
@@ -168,10 +238,33 @@ const getNotificationById = async ({ businessId, userId, notificationId }) => {
     _id: notificationId,
     businessId,
     recipientId: userId,
-  }).populate("createdBy", "name email");
+  }).populate("createdBy", "name firstName lastName email").lean();
 
   if (!notification) {
     throw new ApiError(404, "Notification not found");
+  }
+
+  if (notification?.source?.type === "AUTOMATION" || notification?.metadata?.automationId) {
+    const automationId = notification?.source?.id || notification?.metadata?.automationId;
+    const automation = await Automation.findOne({ _id: automationId, businessId }).select("name").lean();
+    notification.source = {
+      type: "AUTOMATION",
+      id: automationId,
+      name: notification?.source?.name || automation?.name || "Automation",
+      email: null,
+      role: null,
+    };
+  } else {
+    const member = notification?.createdBy?._id
+      ? await BusinessMember.findOne({ businessId, userId: notification.createdBy._id, status: "ACTIVE" }).populate("roleId", "name slug").lean()
+      : null;
+    notification.source = {
+      type: notification?.source?.type || "BUSINESS_MEMBER",
+      id: notification?.source?.id || notification?.createdBy?._id || null,
+      name: notification?.source?.name || notification?.createdBy?.name || [notification?.createdBy?.firstName, notification?.createdBy?.lastName].filter(Boolean).join(" ").trim() || notification?.createdBy?.email || "Business member",
+      email: notification?.source?.email || notification?.createdBy?.email || null,
+      role: notification?.source?.role || member?.roleId?.name || member?.roleId?.slug || null,
+    };
   }
 
   return notification;

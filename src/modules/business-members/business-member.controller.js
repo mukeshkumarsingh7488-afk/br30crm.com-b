@@ -57,7 +57,7 @@ const updateMember = asyncHandler(async (req, res) => {
 const removeMember = asyncHandler(async (req, res) => {
   const member = await businessMemberService.removeMember(req.params.memberId, req.user.userId);
 
-  return ApiResponse.success(res, { member }, "Business member removed successfully.");
+  return ApiResponse.success(res, { member }, "Business member deleted successfully.");
 });
 
 module.exports = {

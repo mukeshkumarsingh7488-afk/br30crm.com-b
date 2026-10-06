@@ -166,16 +166,34 @@ const executeAction = async ({ automation, payload, action }) => {
   }
   if (action.type === "send_notification") {
     await validateRef(payload.businessId, "user", cfg.recipientId);
+    const entityPathMap = {
+      lead: "leads",
+      contact: "contacts",
+      company: "companies",
+      deal: "deals",
+      task: "tasks",
+      activity: "activities",
+      note: "notes",
+    };
+    const actionUrl = payload.entityId && entityPathMap[entity] ? `/${entityPathMap[entity]}/${payload.entityId}` : "/notifications";
     const notification = await Notification.create({
       businessId: payload.businessId,
       recipientId: cfg.recipientId,
-      type: "SYSTEM",
+      type: "AUTOMATION",
       title: cfg.title || automation.name,
       message: cfg.message || `Automation executed for ${payload.entity}.`,
       status: "UNREAD",
+      actionUrl,
       entityType: payload.entity,
       entityId: payload.entityId,
-      metadata: { automationId: automation._id },
+      source: {
+        type: "AUTOMATION",
+        id: automation._id,
+        name: automation.name,
+        email: null,
+        role: null,
+      },
+      metadata: { automationId: automation._id, automationName: automation.name },
       createdBy: payload.actorId,
     });
     return { type: action.type, status: "SUCCESS", id: notification._id };

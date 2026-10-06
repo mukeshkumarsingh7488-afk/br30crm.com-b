@@ -254,7 +254,7 @@ const updateMember = async (memberId, updates, updatedBy) => {
 
 const removeMember = async (memberId, removedBy) => {
   validateObjectId(memberId, "member ID");
-  validateObjectId(removedBy, "remover ID");
+  validateObjectId(removedBy, "deleter ID");
 
   const member = await BusinessMember.findById(memberId);
 
@@ -264,16 +264,19 @@ const removeMember = async (memberId, removedBy) => {
 
   const business = await Business.findById(member.businessId).select("ownerId");
 
-  if (business && business.ownerId.toString() === member.userId.toString()) {
-    throw new ApiError(400, "The business owner cannot be removed from the business.");
+  if (business && business.ownerId && business.ownerId.toString() === member.userId.toString()) {
+    throw new ApiError(400, "The business owner cannot be deleted from the business.");
   }
 
-  member.status = "INACTIVE";
-  member.updatedBy = removedBy;
+  await BusinessMember.deleteOne({ _id: memberId });
 
-  await member.save();
-
-  return getMemberById(member._id);
+  return {
+    _id: member._id,
+    userId: member.userId,
+    businessId: member.businessId,
+    deletedBy: removedBy,
+    deletedAt: new Date(),
+  };
 };
 
 const checkUserMembership = async (businessId, userId) => {

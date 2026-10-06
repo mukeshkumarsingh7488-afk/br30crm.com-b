@@ -70,6 +70,36 @@ const notificationSchema = new mongoose.Schema(
       default: null,
     },
 
+    source: {
+      type: {
+        type: String,
+        enum: ["USER", "BUSINESS_MEMBER", "TEAM", "AUTOMATION", "SYSTEM"],
+        default: "USER",
+      },
+      id: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+      },
+      name: {
+        type: String,
+        trim: true,
+        maxlength: 200,
+        default: null,
+      },
+      email: {
+        type: String,
+        trim: true,
+        maxlength: 320,
+        default: null,
+      },
+      role: {
+        type: String,
+        trim: true,
+        maxlength: 120,
+        default: null,
+      },
+    },
+
     metadata: {
       type: mongoose.Schema.Types.Mixed,
       default: {},

@@ -62,7 +62,7 @@ router.get("/member/:memberId", memberDetailsValidator, validate, requireBusines
 router.patch("/member/:memberId", updateMemberValidator, validate, requireBusinessMembership, requireManagementRole, requirePermission("users.update"), businessMemberController.updateMember);
 
 /*
- * Remove/deactivate a business member.
+ * Permanently delete a business member.
  *
  * Required permission:
  * users.delete
