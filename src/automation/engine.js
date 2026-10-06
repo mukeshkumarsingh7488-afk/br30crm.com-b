@@ -261,7 +261,7 @@ const processAutomation = async (automation, payload, event, options = {}) => {
         execution.durationMs = Date.now() - startedAt.getTime();
         execution.actionResults = results.concat([{ type: action.type, status: "SCHEDULED", delaySeconds: action.delaySeconds }]);
         await execution.save();
-        await Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } });
+        await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload.automationDepth || 0) + 1 }, () => Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } }));
         return { status: "SUCCESS", executionId: execution._id, scheduled: true };
       }
       try {
@@ -283,7 +283,7 @@ const processAutomation = async (automation, payload, event, options = {}) => {
     execution.completedAt = new Date();
     execution.durationMs = Date.now() - startedAt.getTime();
     await execution.save();
-    await Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, ...(failed ? { "stats.failedRuns": 1 } : { "stats.successRuns": 1 }) }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: failed ? "FAILED" : "SUCCESS", lastExecutionError: execution.error } });
+    await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload.automationDepth || 0) + 1 }, () => Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, ...(failed ? { "stats.failedRuns": 1 } : { "stats.successRuns": 1 }) }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: failed ? "FAILED" : "SUCCESS", lastExecutionError: execution.error } }));
     await publish(`automation.${payload.entity || automation.trigger.entity}.${automation.trigger.event}`, {
       businessId: payload.businessId,
       entity: payload.entity,
@@ -300,7 +300,7 @@ const processAutomation = async (automation, payload, event, options = {}) => {
     execution.completedAt = new Date();
     execution.durationMs = Date.now() - startedAt.getTime();
     await execution.save();
-    await Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, "stats.failedRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "FAILED", lastExecutionError: error.message } });
+    await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload.automationDepth || 0) + 1 }, () => Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, "stats.failedRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "FAILED", lastExecutionError: error.message } }));
     return { status: "FAILED", executionId: execution._id, error: error.message };
   }
 };
@@ -324,7 +324,7 @@ const runScheduledAutomations = async (limit = 25) => {
   const automations = await Automation.find({ status: "ACTIVE", "trigger.mode": "SCHEDULE", "trigger.schedule.enabled": true, "trigger.schedule.nextRunAt": { $lte: now }, $or: [{ "trigger.schedule.endAt": null }, { "trigger.schedule.endAt": { $gt: now } }] }).limit(limit);
   for (const automation of automations) {
     const payload = { businessId: automation.businessId, entity: automation.trigger.entity, entityId: null, record: {}, actorId: automation.updatedBy || automation.createdBy };
-    await processAutomation(automation, payload, "schedule.execute", { manual: true });
+    await runWithAutomationContext({ automationId: automation._id.toString(), depth: 1 }, () => processAutomation(automation, payload, "schedule.execute", { manual: true }));
     const interval = Number(automation.trigger.schedule.intervalSeconds || 0);
     const next = interval ? new Date(Date.now() + interval * 1000) : null;
     await Automation.updateOne({ _id: automation._id }, { $set: { "trigger.schedule.nextRunAt": next, ...(next ? {} : { status: "INACTIVE" }) } });
@@ -344,13 +344,13 @@ const continueAutomation = async ({ automationId, executionId, payload, event, a
       await execution.save();
       return;
     }
-    const result = await executeAction({ automation, payload, action });
+    const result = await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload?.automationDepth || 0) + 1 }, () => executeAction({ automation, payload, action }));
     execution.actionResults.push(result);
   }
   execution.completedAt = new Date();
   execution.durationMs = execution.completedAt.getTime() - execution.startedAt.getTime();
   execution.status = "SUCCESS";
   await execution.save();
-  await Automation.updateOne({ _id: automation._id }, { $inc: { "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } });
+  await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload?.automationDepth || 0) + 1 }, () => Automation.updateOne({ _id: automation._id }, { $inc: { "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } }));
 };
 module.exports = { processEvent, processAutomation, runScheduledAutomations, continueAutomation, executeAction };

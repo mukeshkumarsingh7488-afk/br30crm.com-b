@@ -1,5 +1,6 @@
 const ApiError = require("../utils/ApiError");
 const { verifyAccessToken } = require("../utils/jwt");
+const { runWithRequestContext } = require("../events/requestContext");
 
 const auth = (req, res, next) => {
   const authorization = req.headers.authorization;
@@ -18,7 +19,10 @@ const auth = (req, res, next) => {
     const decoded = verifyAccessToken(token);
     req.user = decoded;
 
-    return next();
+    return runWithRequestContext(
+      { userId: decoded.userId, requestId: req.requestId || null },
+      next
+    );
   } catch (error) {
     return next(new ApiError(401, "Invalid or expired access token."));
   }

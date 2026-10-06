@@ -13,7 +13,8 @@ const initAutomationEngine = () => {
     try {
       const [module, action] = String(event || "").split(".");
       const auditable = ["created", "updated", "deleted", "status_changed", "assigned", "stage_changed"].includes(action);
-      if (auditable && payload?.businessId) {
+      const internalAutomationUpdate = module === "automation" && payload?.automationId;
+      if (auditable && payload?.businessId && !internalAutomationUpdate) {
         await createAuditLog({ businessId: payload.businessId, actorId: payload.actorId || null, action, module, entityType: payload.entity || module, entityId: payload.entityId || null, description: `${module} ${action}`, metadata: { source: "eventBus", automationId: payload.automationId || null } });
       }
     } catch (error) { console.error("Audit event error:", error.message); }

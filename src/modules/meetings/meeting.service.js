@@ -4,7 +4,6 @@ const Meeting = require("./meeting.model");
 const BusinessMember = require("../business-members/business-member.model");
 
 const ApiError = require("../../utils/ApiError");
-const { publish } = require("../../events/eventBus");
 
 const ensure = async (businessId, userId) => {
   if (!mongoose.Types.ObjectId.isValid(businessId)) {
@@ -266,14 +265,6 @@ const create = async ({ businessId, userId, data }) => {
     createdBy: userId,
   });
 
-  await publish("meeting.created", {
-    businessId,
-    entity: "MEETING",
-    entityId: meeting._id.toString(),
-    record: meeting.toObject(),
-    actorId: userId,
-  });
-
   return meeting;
 };
 
@@ -357,14 +348,6 @@ const update = async ({ businessId, userId, meetingId, data }) => {
 
   await meeting.save();
 
-  await publish("meeting.updated", {
-    businessId,
-    entity: "MEETING",
-    entityId: meeting._id.toString(),
-    record: meeting.toObject(),
-    actorId: userId,
-  });
-
   return meeting;
 };
 
@@ -391,14 +374,6 @@ const remove = async ({ businessId, userId, meetingId }) => {
   meeting.updatedBy = userId;
 
   await meeting.save();
-
-  await publish("meeting.deleted", {
-    businessId,
-    entity: "MEETING",
-    entityId: meeting._id.toString(),
-    record: meeting.toObject(),
-    actorId: userId,
-  });
 
   return meeting;
 };

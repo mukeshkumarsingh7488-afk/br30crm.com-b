@@ -84,8 +84,8 @@ const createNotification = async ({ businessId, userId, data }) => {
     actionUrl: data.actionUrl || null,
     entityType: data.entityType || null,
     entityId: data.entityId || null,
-    source: data.source || {
-      type: "BUSINESS_MEMBER",
+    source: {
+      type: "USER",
       id: userId,
       name: creatorName,
       email: creator?.email || null,
@@ -135,17 +135,20 @@ const getNotifications = async ({ businessId, userId, recipientId, status, type,
 
   const [notifications, total] = await Promise.all([Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limitNumber).populate("createdBy", "name firstName lastName email").lean(), Notification.countDocuments(filter)]);
 
-  const creatorIds = notifications
-    .filter((item) => !item?.source?.type || ["USER", "BUSINESS_MEMBER"].includes(item.source.type))
-    .map((item) => item?.createdBy?._id)
+  const actorIds = notifications
+    .map((item) => item?.source?.id || item?.metadata?.actorId || item?.createdBy?._id)
     .filter(Boolean)
     .map(String);
-  const uniqueCreatorIds = [...new Set(creatorIds)];
-  const members = uniqueCreatorIds.length
-    ? await BusinessMember.find({ businessId, userId: { $in: uniqueCreatorIds }, status: "ACTIVE" })
-        .populate("roleId", "name slug")
-        .lean()
-    : [];
+  const uniqueActorIds = [...new Set(actorIds)];
+  const [actors, members] = await Promise.all([
+    uniqueActorIds.length ? User.find({ _id: { $in: uniqueActorIds } }).select("name firstName lastName email").lean() : [],
+    uniqueActorIds.length
+      ? BusinessMember.find({ businessId, userId: { $in: uniqueActorIds }, status: "ACTIVE" })
+          .populate("roleId", "name slug")
+          .lean()
+      : [],
+  ]);
+  const actorByUser = new Map(actors.map((item) => [String(item._id), item]));
   const memberByUser = new Map(members.map((item) => [String(item.userId), item]));
 
   const teamIds = notifications.filter((item) => item?.source?.type === "TEAM" && item?.source?.id).map((item) => item.source.id);
@@ -162,7 +165,9 @@ const getNotifications = async ({ businessId, userId, recipientId, status, type,
   const enrichedNotifications = notifications.map((item) => {
     const source = item.source || {};
     const creator = item.createdBy || null;
-    const member = creator?._id ? memberByUser.get(String(creator._id)) : null;
+    const sourceActorId = source.id || item?.metadata?.actorId || creator?._id || null;
+    const actor = sourceActorId ? actorByUser.get(String(sourceActorId)) || creator : creator;
+    const member = sourceActorId ? memberByUser.get(String(sourceActorId)) : null;
     const team = source.type === "TEAM" && source.id ? teamById.get(String(source.id)) : null;
 
     const automationId = source.type === "AUTOMATION" ? source.id : item?.metadata?.automationId;
@@ -180,9 +185,9 @@ const getNotifications = async ({ businessId, userId, recipientId, status, type,
 
     item.source = {
       type: source.type || "BUSINESS_MEMBER",
-      id: source.id || creator?._id || null,
-      name: source.name || creator?.name || [creator?.firstName, creator?.lastName].filter(Boolean).join(" ").trim() || creator?.email || team?.name || null,
-      email: source.email || creator?.email || null,
+      id: source.id || sourceActorId || null,
+      name: source.name || actor?.name || [actor?.firstName, actor?.lastName].filter(Boolean).join(" ").trim() || actor?.email || team?.name || null,
+      email: source.email || actor?.email || null,
       role: source.role || member?.roleId?.name || member?.roleId?.slug || null,
     };
 
@@ -255,14 +260,18 @@ const getNotificationById = async ({ businessId, userId, notificationId }) => {
       role: null,
     };
   } else {
-    const member = notification?.createdBy?._id
-      ? await BusinessMember.findOne({ businessId, userId: notification.createdBy._id, status: "ACTIVE" }).populate("roleId", "name slug").lean()
+    const sourceActorId = notification?.source?.id || notification?.metadata?.actorId || notification?.createdBy?._id || null;
+    const actor = sourceActorId
+      ? await User.findById(sourceActorId).select("name firstName lastName email").lean()
+      : notification?.createdBy || null;
+    const member = sourceActorId
+      ? await BusinessMember.findOne({ businessId, userId: sourceActorId, status: "ACTIVE" }).populate("roleId", "name slug").lean()
       : null;
     notification.source = {
-      type: notification?.source?.type || "BUSINESS_MEMBER",
-      id: notification?.source?.id || notification?.createdBy?._id || null,
-      name: notification?.source?.name || notification?.createdBy?.name || [notification?.createdBy?.firstName, notification?.createdBy?.lastName].filter(Boolean).join(" ").trim() || notification?.createdBy?.email || "Business member",
-      email: notification?.source?.email || notification?.createdBy?.email || null,
+      type: notification?.source?.type || "USER",
+      id: sourceActorId,
+      name: notification?.source?.name || actor?.name || [actor?.firstName, actor?.lastName].filter(Boolean).join(" ").trim() || actor?.email || "Business member",
+      email: notification?.source?.email || actor?.email || null,
       role: notification?.source?.role || member?.roleId?.name || member?.roleId?.slug || null,
     };
   }

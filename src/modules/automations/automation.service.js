@@ -164,7 +164,8 @@ const executeAutomationManually = async ({ businessId, userId, automationId, ent
   const automation = await Automation.findOne({ _id: automationId, businessId });
   if (!automation) throw new ApiError(404, "Automation not found");
   const { processAutomation } = require("../../automation/engine");
-  return processAutomation(automation, { businessId, entity: automation.trigger.entity, entityId: entityId || null, record: record || {}, actorId: userId, manual: true }, "manual.execute");
+  const { runWithAutomationContext } = require("../../events/automationContext");
+  return runWithAutomationContext({ automationId: automation._id.toString(), depth: 1 }, () => processAutomation(automation, { businessId, entity: automation.trigger.entity, entityId: entityId || null, record: record || {}, actorId: userId, manual: true }, "manual.execute"));
 };
 const getExecutions = async ({ businessId, userId, automationId, status, page = 1, limit = 20 }) => {
   await validateBusiness(businessId);

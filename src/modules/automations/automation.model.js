@@ -60,6 +60,6 @@ automationSchema.index({ businessId: 1, "trigger.entity": 1, "trigger.event": 1 
 automationSchema.index({ businessId: 1, "trigger.schedule.nextRunAt": 1, status: 1 });
 automationSchema.index({ businessId: 1, createdAt: -1 });
 
-registerModelEvents(automationConditionSchema, "automation");
+registerModelEvents(automationSchema, "automation");
 
 module.exports = mongoose.model("Automation", automationSchema);

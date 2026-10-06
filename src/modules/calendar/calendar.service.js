@@ -4,7 +4,6 @@ const Calendar = require("./calendar.model");
 const Meeting = require("../meetings/meeting.model");
 const Activity = require("../activities/activity.model");
 const BusinessMember = require("../business-members/business-member.model");
-const { publish } = require("../../events/eventBus");
 
 const validateId = (id, name) => {
   if (!mongoose.Types.ObjectId.isValid(id)) throw new ApiError(400, `Invalid ${name}.`);
@@ -154,7 +153,6 @@ const create = async ({ businessId, userId, data }) => {
     metadata: data.metadata || {},
     createdBy: userId,
   });
-  await publish("calendar.created", { businessId, entity: "CALENDAR", entityId: event._id.toString(), record: event.toObject(), actorId: userId });
   return event;
 };
 const update = async ({ businessId, userId, calendarId, data }) => {
@@ -180,7 +178,6 @@ const update = async ({ businessId, userId, calendarId, data }) => {
   event.endAt = range.end;
   event.updatedBy = userId;
   await event.save();
-  await publish("calendar.updated", { businessId, entity: "CALENDAR", entityId: event._id.toString(), record: event.toObject(), actorId: userId });
   return event;
 };
 const remove = async ({ businessId, userId, calendarId }) => {
@@ -193,7 +190,6 @@ const remove = async ({ businessId, userId, calendarId }) => {
   event.deletedBy = userId;
   event.updatedBy = userId;
   await event.save();
-  await publish("calendar.deleted", { businessId, entity: "CALENDAR", entityId: event._id.toString(), record: event.toObject(), actorId: userId });
   return event;
 };
 module.exports = { list, getById, create, update, remove, ensureMember, validateId, checkOverlap };
