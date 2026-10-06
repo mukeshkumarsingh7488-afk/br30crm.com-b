@@ -8,7 +8,7 @@ const getAuditLogs = asyncHandler(async (req, res) => {
 
   const result = await auditService.getAuditLogs(businessId, req.user.userId, req.query);
 
-  return res.status(200).json(new ApiResponse(200, result, "Audit logs fetched successfully"));
+  return ApiResponse.success(res, result, "Audit logs fetched successfully");
 });
 
 const getAuditLogById = asyncHandler(async (req, res) => {
@@ -16,7 +16,7 @@ const getAuditLogById = asyncHandler(async (req, res) => {
 
   const auditLog = await auditService.getAuditLogById(businessId, req.user.userId, auditId);
 
-  return res.status(200).json(new ApiResponse(200, auditLog, "Audit log fetched successfully"));
+  return ApiResponse.success(res, auditLog, "Audit log fetched successfully");
 });
 
 const getEntityAuditLogs = asyncHandler(async (req, res) => {
@@ -24,7 +24,7 @@ const getEntityAuditLogs = asyncHandler(async (req, res) => {
 
   const result = await auditService.getEntityAuditLogs(businessId, req.user.userId, entityType, entityId, req.query);
 
-  return res.status(200).json(new ApiResponse(200, result, "Entity audit logs fetched successfully"));
+  return ApiResponse.success(res, result, "Entity audit logs fetched successfully");
 });
 
 module.exports = {

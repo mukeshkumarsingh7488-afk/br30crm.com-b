@@ -230,18 +230,8 @@ const getBusinessByIdForUser = async (businessId, userId) => {
     throw new ApiError(404, "Business not found.");
   }
 
-  if (String(business.ownerId || "") === String(userId) || String(business.createdBy || "") === String(userId)) {
-    return business;
-  }
-
-  const membership = await BusinessMember.findOne({
-    businessId: business._id,
-    userId,
-    status: "ACTIVE",
-  }).select("_id").lean();
-
-  if (!membership) {
-    throw new ApiError(403, "You do not have access to this business.");
+  if (String(business.ownerId || "") !== String(userId)) {
+    throw new ApiError(403, "Only the business owner can view business details.");
   }
 
   return business;

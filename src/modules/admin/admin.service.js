@@ -8,6 +8,7 @@ const Company = require("../companies/company.model");
 const Deal = require("../deals/deal.model");
 const Announcement = require("../announcements/announcement.model");
 const WhatsNew = require("../whats-new/whats-new.model");
+const BusinessMember = require("../business-members/business-member.model");
 
 const ApiError = require("../../utils/ApiError");
 
@@ -89,7 +90,27 @@ const getUserById = async (userId) => {
     throw new ApiError(404, "User not found.");
   }
 
-  return user;
+  const memberships = await BusinessMember.find({
+    userId: user._id,
+    status: "ACTIVE",
+  })
+    .select("_id businessId userId roleId status joinedAt createdAt updatedAt")
+    .populate("businessId", "_id name slug legalName businessType industry logo website status timezone currency ownerId")
+    .populate("roleId", "_id name slug type")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const primaryMembership = memberships[0] || null;
+
+  return {
+    ...user,
+
+    businessId: primaryMembership?.businessId?._id || null,
+
+    membershipId: primaryMembership?._id || null,
+
+    memberships,
+  };
 };
 
 /*

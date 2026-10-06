@@ -39,7 +39,7 @@ const updateTeam = asyncHandler(async (req, res) => {
 const deleteTeam = asyncHandler(async (req, res) => {
   const team = await teamService.deleteTeam(req.params.teamId, req.params.businessId, req.user.userId);
 
-  return ApiResponse.success(res, { team }, "Team deactivated successfully.");
+  return ApiResponse.success(res, { team }, "Team deleted successfully.");
 });
 
 const addTeamMember = asyncHandler(async (req, res) => {

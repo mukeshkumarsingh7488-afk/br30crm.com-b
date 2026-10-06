@@ -16,7 +16,7 @@ router.post("/", createBusinessValidator, validate, businessController.createBus
 
 router.get("/", businessController.getMyBusinesses);
 
-router.get("/:businessId", businessIdValidator, validate, requireBusinessMembership, businessController.getBusinessById);
+router.get("/:businessId", businessIdValidator, validate, requireBusinessOwner, businessController.getBusinessById);
 
 router.patch("/:businessId", updateBusinessValidator, validate, requireBusinessOwner, businessController.updateBusiness);
 

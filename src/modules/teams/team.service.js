@@ -4,6 +4,9 @@ const Team = require("./team.model");
 const Business = require("../businesses/business.model");
 const BusinessMember = require("../business-members/business-member.model");
 const User = require("../users/user.model");
+const Company = require("../companies/company.model");
+const Contact = require("../contacts/contact.model");
+const Lead = require("../leads/lead.model");
 
 const ApiError = require("../../utils/ApiError");
 
@@ -296,12 +299,31 @@ const deleteTeam = async (teamId, businessId, deletedBy) => {
     throw new ApiError(404, "Team not found for this business.");
   }
 
-  team.status = "INACTIVE";
-  team.updatedBy = deletedBy;
+  const [companyExists, contactExists, leadExists] = await Promise.all([
+    Company.exists({
+      businessId,
+      assignedTeamId: team._id,
+    }),
+    Contact.exists({
+      businessId,
+      assignedTeamId: team._id,
+    }),
+    Lead.exists({
+      businessId,
+      assignedTeamId: team._id,
+    }),
+  ]);
 
-  await team.save();
+  if (companyExists || contactExists || leadExists) {
+    throw new ApiError(400, "This team is assigned to existing CRM records and cannot be deleted.");
+  }
 
-  return getTeamById(team._id);
+  await Team.deleteOne({
+    _id: team._id,
+    businessId,
+  });
+
+  return team;
 };
 
 const addTeamMember = async (teamId, businessId, userId, updatedBy) => {

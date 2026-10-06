@@ -146,7 +146,7 @@ const getAuditLogs = async (businessId, userId, filters = {}) => {
   const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
   const skip = (safePage - 1) * safeLimit;
 
-  const [logs, total] = await Promise.all([AuditLog.find(query).populate("actorId", "name email").sort({ createdAt: -1 }).skip(skip).limit(safeLimit).lean(), AuditLog.countDocuments(query)]);
+  const [logs, total] = await Promise.all([AuditLog.find(query).populate("actorId", "name email role").sort({ createdAt: -1 }).skip(skip).limit(safeLimit).lean(), AuditLog.countDocuments(query)]);
 
   return {
     logs,
@@ -167,7 +167,7 @@ const getAuditLogById = async (businessId, userId, auditId) => {
     _id: auditId,
     businessId,
   })
-    .populate("actorId", "name email")
+    .populate("actorId", "name email role")
     .lean();
 
   if (!auditLog) {
@@ -193,7 +193,7 @@ const getEntityAuditLogs = async (businessId, userId, entityType, entityId, filt
     entityId,
   };
 
-  const [logs, total] = await Promise.all([AuditLog.find(query).populate("actorId", "name email").sort({ createdAt: -1 }).skip(skip).limit(safeLimit).lean(), AuditLog.countDocuments(query)]);
+  const [logs, total] = await Promise.all([AuditLog.find(query).populate("actorId", "name email role").sort({ createdAt: -1 }).skip(skip).limit(safeLimit).lean(), AuditLog.countDocuments(query)]);
 
   return {
     logs,

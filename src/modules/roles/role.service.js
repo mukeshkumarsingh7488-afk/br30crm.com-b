@@ -6,7 +6,6 @@ const Permission = require("../permissions/permission.model");
 const Business = require("../businesses/business.model");
 const BusinessMember = require("../business-members/business-member.model");
 const permissionService = require("../permissions/permission.service");
-
 /*
  * ============================================================
  * VALIDATION
@@ -32,7 +31,9 @@ const resolveRolePermissionIds = async (permissionIds, businessId, { dropInactiv
       { businessId: null, type: "SYSTEM" },
       { businessId, type: "CUSTOM" },
     ],
-  }).select("_id").lean();
+  })
+    .select("_id")
+    .lean();
 
   const scopedIds = new Set(scopedPermissions.map((permission) => String(permission._id)));
   for (const permissionId of uniqueIds) {
@@ -825,10 +826,19 @@ const deleteRole = async (roleId, deletedBy, businessId = null) => {
    * Do not delete physically.
    * Deactivate the role so historical memberships remain valid.
    */
-  role.isActive = false;
-  role.updatedBy = deletedBy;
+  const assignedMember = await BusinessMember.exists({
+    businessId: role.businessId,
+    roleId: role._id,
+  });
 
-  await role.save();
+  if (assignedMember) {
+    throw new ApiError(400, "This role is assigned to one or more business members and cannot be deleted.");
+  }
+
+  await Role.deleteOne({
+    _id: role._id,
+    businessId: role.businessId,
+  });
 
   return role;
 };

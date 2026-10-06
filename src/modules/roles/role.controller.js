@@ -65,7 +65,7 @@ const updateRole = asyncHandler(async (req, res) => {
 const deleteRole = asyncHandler(async (req, res) => {
   const role = await roleService.deleteRole(req.params.roleId, req.user.userId, req.businessId);
 
-  return ApiResponse.success(res, { role }, "Role deactivated successfully.");
+  return ApiResponse.success(res, { role }, "Role deleted successfully.");
 });
 
 module.exports = {
