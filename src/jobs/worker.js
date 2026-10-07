@@ -4,16 +4,11 @@ let timer = null;
 
 const startWorker = () => {
   if (timer) return;
-
   timer = setInterval(() => {
-    poll(10).catch((error) => console.error("Background worker error:", error));
+    poll(10).catch(() => {});
   }, 5000);
-
-  recoverStaleJobs().catch((error) => console.error("Background job recovery error:", error));
-
+  recoverStaleJobs().catch(() => {});
   if (timer.unref) timer.unref();
-
-  console.log("Background worker started.");
 };
 
 const stopWorker = () => {

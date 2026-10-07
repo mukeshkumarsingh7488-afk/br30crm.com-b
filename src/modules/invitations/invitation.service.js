@@ -7,7 +7,7 @@ const Role = require("../roles/role.model");
 const User = require("../users/user.model");
 
 const ApiError = require("../../utils/ApiError");
-const { transporter } = require("../../config/email");
+const emailService = require("../../services/email.service");
 const env = require("../../config/env");
 
 const INVITATION_EXPIRY_DAYS = 7;
@@ -36,51 +36,12 @@ const getInvitationExpiry = () => {
 };
 
 const sendInvitationEmail = async ({ email, business, role, token, expiresAt }) => {
-  const invitationUrl = `${env.frontendUrl}/accept-invitation?token=${encodeURIComponent(token)}`;
-
-  const expiryText = new Date(expiresAt).toLocaleString();
-
-  const mailOptions = {
-    from: env.brevoEmail,
-    to: email,
-    subject: `Invitation to join ${business.name}`,
-    text: [`You have been invited to join ${business.name} on BR30 CRM.`, "", `Role: ${role.name}`, "", `Accept your invitation: ${invitationUrl}`, "", `This invitation expires on: ${expiryText}`, "", "If you did not expect this invitation, you can ignore this email."].join("\n"),
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:30px;">
-        <h2>You have been invited to join ${business.name}</h2>
-
-        <p>
-          You have been invited to join
-          <strong>${business.name}</strong>
-          on BR30 CRM.
-        </p>
-
-        <p>
-          <strong>Role:</strong> ${role.name}
-        </p>
-
-        <p style="margin:30px 0;">
-          <a
-            href="${invitationUrl}"
-            style="display:inline-block;padding:12px 22px;background:#111827;color:#ffffff;text-decoration:none;border-radius:6px;"
-          >
-            Accept Invitation
-          </a>
-        </p>
-
-        <p>
-          This invitation expires on:
-          <strong>${expiryText}</strong>
-        </p>
-
-        <p>
-          If you did not expect this invitation, you can safely ignore this email.
-        </p>
-      </div>
-    `,
-  };
-
-  await transporter.sendMail(mailOptions);
+  const invitationUrl = `https://br30crm-com-f.vercel.app/accept-invitation?token=${encodeURIComponent(token)}`;
+  const expiryText = new Date(expiresAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+  const subject = `You're invited to join ${business.name} on BR30 CRM`;
+  const text = [`Hello,`, `You have been invited to join ${business.name} on BR30 CRM.`, `Role: ${role.name}`, `Accept your invitation: ${invitationUrl}`, `This invitation expires on ${expiryText}.`, `If you were not expecting this invitation, you can safely ignore this email.`].join("\n\n");
+  const html = `<!doctype html><html><body style="margin:0;background:#f4f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033;"><div style="max-width:620px;margin:32px auto;padding:0 16px;"><div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;"><div style="padding:28px 30px;background:#111827;color:#ffffff;"><div style="font-size:22px;font-weight:700;">BR30 CRM</div><div style="margin-top:6px;font-size:13px;color:#cbd5e1;">Business workspace invitation</div></div><div style="padding:30px;"><p style="margin:0 0 14px;font-size:16px;">Hello,</p><p style="margin:0 0 18px;line-height:1.7;color:#475569;">You have been invited to join <strong style="color:#111827;">${business.name}</strong> on BR30 CRM.</p><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:24px;"><div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Assigned role</div><div style="margin-top:5px;font-size:15px;font-weight:600;">${role.name}</div></div><div style="text-align:center;margin:28px 0;"><a href="${invitationUrl}" style="display:inline-block;padding:13px 24px;background:#6366f1;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;">Accept Invitation</a></div><p style="margin:0 0 10px;font-size:13px;color:#64748b;">This invitation expires on <strong>${expiryText}</strong>.</p><p style="margin:18px 0 0;font-size:13px;line-height:1.6;color:#94a3b8;">If you were not expecting this invitation, you can safely ignore this email.</p></div></div><div style="padding:18px;text-align:center;font-size:12px;color:#94a3b8;">BR30 CRM · Business workspace management</div></div></body></html>`;
+  await emailService.sendEmail({ to: email, subject, text, html, senderName: env.appName || "BR30 CRM" });
 };
 
 const getBusiness = async (businessId) => {
@@ -198,8 +159,7 @@ const createInvitation = async ({ businessId, email, roleId, invitedBy }) => {
     });
   } catch (error) {
     await Invitation.findByIdAndDelete(invitation._id);
-
-    throw new ApiError(500, "Invitation could not be sent. Please try again.");
+    throw new ApiError(500, error?.message || "Invitation could not be sent. Please try again.");
   }
 
   return Invitation.findById(invitation._id).populate("businessId", "name slug logo").populate("roleId", "name slug description type").populate("invitedBy", "name email").lean();

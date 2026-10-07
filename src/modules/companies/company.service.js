@@ -87,9 +87,6 @@ const verifyTeam = async (businessId, teamId) => {
   return team;
 };
 
-/*
- * Verify that a company belongs to the same business.
- */
 const verifyCompany = async (businessId, companyId) => {
   validateObjectId(businessId, "business ID");
 
@@ -250,9 +247,6 @@ const getCompaniesByBusiness = async (businessId, { page = 1, limit = 10, search
     Company.countDocuments(filter),
   ]);
 
-  /*
-   * Add linked contact count to every company.
-   */
   const companyIds = companies.map((company) => company._id);
 
   const contactCounts = companyIds.length
@@ -396,16 +390,6 @@ const updateCompany = async (companyId, businessId, updates, updatedBy, access =
     company.customFields = updates.customFields && typeof updates.customFields === "object" ? updates.customFields : {};
   }
 
-  /*
-   * Important relationship rule:
-   *
-   * Deactivating a company does NOT remove
-   * contact.companyId.
-   *
-   * The relationship remains intact, while
-   * Contact creation/update prevents attaching
-   * new contacts to an inactive company.
-   */
   company.updatedBy = updatedBy;
 
   await company.save();
@@ -459,10 +443,6 @@ const getCompanyContacts = async (companyId, businessId, { page = 1, limit = 10,
 
   validateObjectId(companyId, "company ID");
 
-  /*
-   * Company must belong to the
-   * requested business.
-   */
   const company = await verifyCompany(businessId, companyId);
 
   if (access) assertRecordAccess(company, await resolveRecordAccess(businessId, access));
@@ -562,10 +542,6 @@ const deleteCompany = async (companyId, businessId, deletedBy, access = null) =>
 
   if (access) assertRecordAccess(company, await resolveRecordAccess(businessId, access));
 
-  /*
-   * Never leave orphaned Contact.companyId
-   * references.
-   */
   const contactCount = await Contact.countDocuments({
     businessId,
     companyId,

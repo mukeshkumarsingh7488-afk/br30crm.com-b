@@ -10,12 +10,6 @@ const validator = require("./public-form.validator");
 
 const router = express.Router();
 
-/*
-|--------------------------------------------------------------------------
-| Authenticated Form Management
-|--------------------------------------------------------------------------
-*/
-
 router.get("/business/:businessId", auth, validator.list, validate, requireBusinessMembership, requirePermission("forms.view"), c.list);
 
 router.post("/business/:businessId", auth, validator.create, validate, requireBusinessMembership, requirePermission("forms.create"), c.create);
@@ -23,15 +17,6 @@ router.post("/business/:businessId", auth, validator.create, validate, requireBu
 router.patch("/business/:businessId/:formId", auth, validator.update, validate, requireBusinessMembership, requirePermission("forms.update"), c.update);
 
 router.delete("/business/:businessId/:formId", auth, validator.byId, validate, requireBusinessMembership, requireManagementRole, requirePermission("forms.delete"), c.remove);
-
-/*
-|--------------------------------------------------------------------------
-| Public Form
-|--------------------------------------------------------------------------
-|
-| These endpoints intentionally do not require authentication.
-|
-*/
 
 router.get("/public/:businessId/:slug", validator.publicGet, validate, c.publicGet);
 

@@ -115,7 +115,6 @@ const sendEmail = async ({ to, cc, bcc, subject, html, text, senderName }) => {
       throw new Error("Brevo EMAIL API did not return a message ID.");
     }
 
-
     return {
       provider: "brevo-email",
       providerMessageId: String(providerMessageId),
@@ -125,7 +124,6 @@ const sendEmail = async ({ to, cc, bcc, subject, html, text, senderName }) => {
       from: senderEmail,
     };
   } catch (error) {
-    console.error("❌ Brevo API email failed:", error.message);
     throw new Error(error.message || "Email sending failed.");
   }
 };
@@ -134,24 +132,12 @@ module.exports = {
   sendEmail,
 };
 
-/*
- * ============================================================
- * BR30 CRM EMAIL BRAND HEADER
- * ============================================================
- */
-
 const emailHeader = `
   <div style="background:#111827;padding:26px 30px;text-align:center;border-radius:14px 14px 0 0;">
     <div style="font-family:Arial,Helvetica,sans-serif;font-size:25px;font-weight:800;line-height:1.2;color:#ffffff;letter-spacing:.2px;">BR30 CRM</div>
     <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:600;line-height:1.4;color:#cbd5e1;margin-top:6px;letter-spacing:.4px;">Business Workspace</div>
   </div>
 `;
-
-/*
- * ============================================================
- * VERIFY EMAIL
- * ============================================================
- */
 
 const sendVerificationOtpEmail = async ({ email, name, otp, expiresInMinutes = 10 }) => {
   const subject = `${env.appName || "BR30 CRM"} - Verify your email`;
@@ -231,12 +217,6 @@ const sendVerificationOtpEmail = async ({ email, name, otp, expiresInMinutes = 1
     html,
   });
 };
-
-/*
- * ============================================================
- * PASSWORD RESET OTP
- * ============================================================
- */
 
 const sendPasswordResetOtpEmail = async ({ email, name, otp, expiresInMinutes = 10 }) => {
   const subject = `${env.appName || "BR30 CRM"} - Password reset OTP`;

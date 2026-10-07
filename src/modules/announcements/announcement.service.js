@@ -90,12 +90,6 @@ const getAnnouncementBySlug = async (slug) => {
   return announcement;
 };
 
-/*
- * ============================================================
- * CREATE ANNOUNCEMENT
- * ============================================================
- */
-
 const createAnnouncement = async ({ data, userId }) => {
   const scope = data.scope || "SYSTEM";
   const businessId = data.businessId || null;
@@ -133,12 +127,6 @@ const createAnnouncement = async ({ data, userId }) => {
     createdBy: userId,
   };
 
-  /*
-   * ------------------------------------------------------------
-   * Published / Archived date handling
-   * ------------------------------------------------------------
-   */
-
   if (announcementData.status === "PUBLISHED") {
     announcementData.publishedAt = new Date();
     announcementData.archivedAt = null;
@@ -155,24 +143,12 @@ const createAnnouncement = async ({ data, userId }) => {
   return announcement;
 };
 
-/*
- * ============================================================
- * GET ANNOUNCEMENTS
- * ============================================================
- */
-
 const getAnnouncements = async ({ userId, businessId, type, releaseType, status, visibility, featured, page = 1, limit = 20, publicOnly = false }) => {
   const pageNumber = Math.max(Number(page) || 1, 1);
 
   const limitNumber = Math.min(Math.max(Number(limit) || 20, 1), 100);
 
   const filter = {};
-
-  /*
-   * ------------------------------------------------------------
-   * PUBLIC ANNOUNCEMENTS
-   * ------------------------------------------------------------
-   */
 
   if (publicOnly) {
     filter.status = "PUBLISHED";
@@ -181,12 +157,6 @@ const getAnnouncements = async ({ userId, businessId, type, releaseType, status,
 
     filter.scope = "SYSTEM";
   } else {
-    /*
-     * ----------------------------------------------------------
-     * Optional filters
-     * ----------------------------------------------------------
-     */
-
     if (status) {
       filter.status = status;
     }
@@ -206,12 +176,6 @@ const getAnnouncements = async ({ userId, businessId, type, releaseType, status,
     if (typeof featured !== "undefined") {
       filter.isFeatured = featured;
     }
-
-    /*
-     * ----------------------------------------------------------
-     * Business scoped announcements
-     * ----------------------------------------------------------
-     */
 
     if (businessId) {
       await validateBusiness(businessId);
@@ -236,12 +200,6 @@ const getAnnouncements = async ({ userId, businessId, type, releaseType, status,
         },
       ];
     } else {
-      /*
-       * --------------------------------------------------------
-       * System announcements
-       * --------------------------------------------------------
-       */
-
       filter.scope = "SYSTEM";
 
       if (userId) {
@@ -253,12 +211,6 @@ const getAnnouncements = async ({ userId, businessId, type, releaseType, status,
       }
     }
   }
-
-  /*
-   * ------------------------------------------------------------
-   * Release date filtering
-   * ------------------------------------------------------------
-   */
 
   if (publicOnly) {
     filter.releaseDate = {
@@ -284,19 +236,7 @@ const getAnnouncements = async ({ userId, businessId, type, releaseType, status,
     ];
   }
 
-  /*
-   * ------------------------------------------------------------
-   * Pagination
-   * ------------------------------------------------------------
-   */
-
   const skip = (pageNumber - 1) * limitNumber;
-
-  /*
-   * ------------------------------------------------------------
-   * Fetch announcements + total count
-   * ------------------------------------------------------------
-   */
 
   const [announcements, total] = await Promise.all([
     Announcement.find(filter)
@@ -335,12 +275,6 @@ const getAnnouncements = async ({ userId, businessId, type, releaseType, status,
   };
 };
 
-/*
- * ============================================================
- * UPDATE ANNOUNCEMENT
- * ============================================================
- */
-
 const updateAnnouncement = async ({ announcementId, data, userId }) => {
   const announcement = await getAnnouncementById(announcementId);
 
@@ -356,12 +290,6 @@ const updateAnnouncement = async ({ announcementId, data, userId }) => {
   if (nextBusinessId) {
     await validateBusinessMember(nextBusinessId, userId);
   }
-
-  /*
-   * ------------------------------------------------------------
-   * Duplicate slug check
-   * ------------------------------------------------------------
-   */
 
   if (data.slug) {
     const duplicate = await Announcement.findOne({
@@ -387,27 +315,13 @@ const updateAnnouncement = async ({ announcementId, data, userId }) => {
     updatedBy: userId,
   };
 
-  /*
-   * Normalize slug
-   */
-
   if (data.slug) {
     updateData.slug = data.slug.trim().toLowerCase();
   }
 
-  /*
-   * Normalize tags
-   */
-
   if (data.tags) {
     updateData.tags = normalizeTags(data.tags);
   }
-
-  /*
-   * ------------------------------------------------------------
-   * Published / archived date handling
-   * ------------------------------------------------------------
-   */
 
   if (data.status === "PUBLISHED" && announcement.status !== "PUBLISHED") {
     updateData.publishedAt = announcement.publishedAt || new Date();
@@ -423,12 +337,6 @@ const updateAnnouncement = async ({ announcementId, data, userId }) => {
     updateData.archivedAt = null;
   }
 
-  /*
-   * If announcement is moved away from published,
-   * keep the existing published date unless explicitly
-   * changed by the application.
-   */
-
   const updated = await Announcement.findByIdAndUpdate(announcementId, updateData, {
     returnDocument: "after",
 
@@ -439,12 +347,6 @@ const updateAnnouncement = async ({ announcementId, data, userId }) => {
 
   return updated;
 };
-
-/*
- * ============================================================
- * PUBLISH ANNOUNCEMENT
- * ============================================================
- */
 
 const publishAnnouncement = async ({ announcementId, userId }) => {
   const announcement = await getAnnouncementById(announcementId);
@@ -466,12 +368,6 @@ const publishAnnouncement = async ({ announcementId, userId }) => {
   return announcement;
 };
 
-/*
- * ============================================================
- * ARCHIVE ANNOUNCEMENT
- * ============================================================
- */
-
 const archiveAnnouncement = async ({ announcementId, userId }) => {
   const announcement = await getAnnouncementById(announcementId);
 
@@ -486,12 +382,6 @@ const archiveAnnouncement = async ({ announcementId, userId }) => {
   return announcement;
 };
 
-/*
- * ============================================================
- * DELETE / ARCHIVE ANNOUNCEMENT
- * ============================================================
- */
-
 const deleteAnnouncement = async ({ announcementId, userId }) => {
   const announcement = await getAnnouncementById(announcementId);
 
@@ -505,12 +395,6 @@ const deleteAnnouncement = async ({ announcementId, userId }) => {
 
   return announcement;
 };
-
-/*
- * ============================================================
- * EXPORTS
- * ============================================================
- */
 
 module.exports = {
   createAnnouncement,

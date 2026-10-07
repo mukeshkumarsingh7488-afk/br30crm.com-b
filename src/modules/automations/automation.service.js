@@ -203,15 +203,9 @@ const getAutomationMetadata = async ({ businessId, userId }) => {
     fields[entity] = Object.keys(Model.schema.paths)
       .filter((key) => !["_id", "__v", "businessId"].includes(key))
       .slice(0, 200);
-  fields.lead = Array.from(new Set([
-    ...(fields.lead || []),
-    "customFields._leadGeneration.formPurpose",
-    "customFields._leadGeneration.isSupportTicket",
-    "customFields._leadGeneration.formName",
-    "customFields._leadGeneration.formSlug",
-    "customFields._leadGeneration.source",
-    "customFields._leadGeneration.campaign",
-  ]));
+  fields.lead = Array.from(
+    new Set([...(fields.lead || []), "customFields._leadGeneration.formPurpose", "customFields._leadGeneration.isSupportTicket", "customFields._leadGeneration.formName", "customFields._leadGeneration.formSlug", "customFields._leadGeneration.source", "customFields._leadGeneration.campaign"])
+  );
   return {
     entities: ENTITY_VALUES,
     events: EVENT_VALUES,

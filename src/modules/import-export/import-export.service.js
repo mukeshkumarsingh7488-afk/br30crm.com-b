@@ -45,7 +45,6 @@ const createImport = async ({ businessId, userId, entityType, csv, rows, fileNam
   const parsed = Array.isArray(rows) ? rows : parseCsv(csv);
   if (!parsed.length) throw new ApiError(400, "No import rows supplied.");
   const job = await ImportJob.create({ businessId, userId, direction: "IMPORT", entityType, status: "PENDING", totalRows: parsed.length, fileName });
-  // Keep payload in job result so the worker can process it without another storage dependency.
   job.result = { rows: parsed.slice(0, 10000) };
   await job.save();
   return job;
@@ -113,4 +112,22 @@ const processJob = async (jobId) => {
   await job.save();
 };
 
-module.exports = { createImport, list, get, exportData, processJob, parseCsv };
+const csvCell = (value) => {
+  if (value === null || value === undefined) return "";
+  const text = typeof value === "object" ? JSON.stringify(value) : String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
+
+const rowsToCsv = (rows) => {
+  if (!Array.isArray(rows) || !rows.length) return "";
+  const headers = [...new Set(rows.flatMap((row) => Object.keys(row || {})))];
+  return [headers.map(csvCell).join(","), ...rows.map((row) => headers.map((header) => csvCell(row?.[header])).join(","))].join("\n");
+};
+
+const download = async ({ businessId, jobId }) => {
+  const job = await get({ businessId, jobId });
+  if (job.direction !== "EXPORT") throw new ApiError(400, "Only export jobs can be downloaded.");
+  return { fileName: `${String(job.entityType).toLowerCase()}-export-${job._id}.csv`, csv: rowsToCsv(job.result?.rows || []) };
+};
+
+module.exports = { createImport, list, get, exportData, processJob, parseCsv, download };

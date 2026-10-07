@@ -19,10 +19,7 @@ const auth = (req, res, next) => {
     const decoded = verifyAccessToken(token);
     req.user = decoded;
 
-    return runWithRequestContext(
-      { userId: decoded.userId, requestId: req.requestId || null },
-      next
-    );
+    return runWithRequestContext({ userId: decoded.userId, requestId: req.requestId || null }, next);
   } catch (error) {
     return next(new ApiError(401, "Invalid or expired access token."));
   }

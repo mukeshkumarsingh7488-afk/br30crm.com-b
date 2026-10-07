@@ -88,13 +88,11 @@ const sendEmail = async (options = {}) => {
     const responseData = await response.json().catch(() => null);
 
     if (response.ok) {
-        return responseData;
+      return responseData;
     }
 
     throw new Error(responseData?.message || "Brevo API rejected the email request.");
   } catch (error) {
-    console.error("❌ Brevo API email failed:", error.message);
-
     throw new Error(error.message || "Email sending failed.");
   }
 };

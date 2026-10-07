@@ -28,10 +28,6 @@ const roleSchema = new mongoose.Schema(
       default: null,
     },
 
-    /*
-     * null means this is a platform/system-wide role.
-     * ObjectId means the role belongs to one specific business.
-     */
     businessId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Business",
@@ -39,10 +35,6 @@ const roleSchema = new mongoose.Schema(
       index: true,
     },
 
-    /*
-     * System roles are predefined by the CRM.
-     * Custom roles are created by a business.
-     */
     type: {
       type: String,
       enum: ["SYSTEM", "CUSTOM"],
@@ -51,10 +43,6 @@ const roleSchema = new mongoose.Schema(
       index: true,
     },
 
-    /*
-     * Permission IDs will be connected after
-     * the Permissions module is created.
-     */
     permissions: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -92,13 +80,6 @@ const roleSchema = new mongoose.Schema(
   }
 );
 
-/*
- * A business cannot have two custom roles
- * with the same slug.
- *
- * For system roles, businessId is null and
- * slug must also remain unique.
- */
 roleSchema.index(
   {
     businessId: 1,

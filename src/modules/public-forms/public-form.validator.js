@@ -104,12 +104,6 @@ const optionalObject = (value) => {
   return true;
 };
 
-/*
-|--------------------------------------------------------------------------
-| Management
-|--------------------------------------------------------------------------
-*/
-
 exports.list = [
   param("businessId").isMongoId().withMessage("Invalid business ID."),
 
@@ -160,10 +154,7 @@ exports.create = [
     })
     .withMessage("Description is too long."),
 
-  body("purpose")
-    .optional()
-    .isIn(["LEAD", "SUPPORT"])
-    .withMessage("Invalid form purpose."),
+  body("purpose").optional().isIn(["LEAD", "SUPPORT"]).withMessage("Invalid form purpose."),
 
   body("fields").custom(validateFields),
 
@@ -253,10 +244,7 @@ exports.update = [
     })
     .withMessage("Description is too long."),
 
-  body("purpose")
-    .optional()
-    .isIn(["LEAD", "SUPPORT"])
-    .withMessage("Invalid form purpose."),
+  body("purpose").optional().isIn(["LEAD", "SUPPORT"]).withMessage("Invalid form purpose."),
 
   body("fields").optional().custom(validateFields),
 
@@ -308,12 +296,6 @@ exports.update = [
 ];
 
 exports.byId = [param("businessId").isMongoId().withMessage("Invalid business ID."), param("formId").isMongoId().withMessage("Invalid form ID.")];
-
-/*
-|--------------------------------------------------------------------------
-| Public
-|--------------------------------------------------------------------------
-*/
 
 exports.publicGet = [
   param("businessId").isMongoId().withMessage("Invalid business ID."),

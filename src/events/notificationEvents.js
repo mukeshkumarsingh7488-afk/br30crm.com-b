@@ -86,40 +86,20 @@ const pretty = (value) =>
     .replace(/[-_]/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 
-const getActorName = (user) =>
-  user?.name ||
-  [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
-  user?.email ||
-  "Business member";
+const getActorName = (user) => user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || user?.email || "Business member";
 
-const getRecordName = (record) =>
-  record?.name ||
-  record?.title ||
-  record?.companyName ||
-  record?.email ||
-  record?.firstName ||
-  record?._id ||
-  null;
+const getRecordName = (record) => record?.name || record?.title || record?.companyName || record?.email || record?.firstName || record?._id || null;
 
 const initNotificationEvents = () => {
   subscribe("*", async (payload, event) => {
     try {
-      const [entity, action] = String(event || "").toLowerCase().split(".");
+      const [entity, action] = String(event || "")
+        .toLowerCase()
+        .split(".");
       if (!payload?.businessId || !ACTIONS.has(action)) return;
-
-      // A single save can emit updated + a more specific state-change event.
-      // Keep the feed useful by storing only the specific event for that change.
-      if (
-        action === "updated" &&
-        (payload?.changeFlags?.statusChanged ||
-          payload?.changeFlags?.stageChanged ||
-          payload?.changeFlags?.assignmentChanged)
-      ) {
+      if (action === "updated" && (payload?.changeFlags?.statusChanged || payload?.changeFlags?.stageChanged || payload?.changeFlags?.assignmentChanged)) {
         return;
       }
-
-      // Automation execution updates its own statistics. Those are internal
-      // engine changes, not business activity that users need in the feed.
       if (entity === "automation" && payload?.automationId) return;
 
       const members = await BusinessMember.find({
@@ -143,11 +123,7 @@ const initNotificationEvents = () => {
               .populate("roleId", "name slug")
               .lean()
           : null,
-        payload.automationId
-          ? Automation.findOne({ _id: payload.automationId, businessId: payload.businessId })
-              .select("name")
-              .lean()
-          : null,
+        payload.automationId ? Automation.findOne({ _id: payload.automationId, businessId: payload.businessId }).select("name").lean() : null,
       ]);
 
       const source = payload.automationId
@@ -209,9 +185,7 @@ const initNotificationEvents = () => {
           createdBy: actorId,
         }))
       );
-    } catch (error) {
-      console.error("Notification event error:", error.message);
-    }
+    } catch (error) {}
   });
 };
 

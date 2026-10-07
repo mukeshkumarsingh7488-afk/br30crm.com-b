@@ -25,10 +25,6 @@ const sessionService = require("../sessions/session.service");
 
 const businessService = require("../businesses/business.service");
 
-// ============================================================
-// MASTER ADMIN
-// ============================================================
-
 const getMasterAdminUserId = () => {
   return env.masterAdminUserId;
 };
@@ -42,10 +38,6 @@ const isMasterAdmin = (userId) => {
 
   return String(userId) === String(masterAdminUserId);
 };
-
-// ============================================================
-// SANITIZE USER
-// ============================================================
 
 const sanitizeUser = (user) => {
   const userObject = user?.toObject ? user.toObject() : { ...user };
@@ -72,10 +64,6 @@ const sanitizeUser = (user) => {
 
   return userObject;
 };
-
-// ============================================================
-// AUTH TOKENS + SESSION
-// ============================================================
 
 const createAuthTokens = async (user, sessionContext = {}) => {
   if (!user?._id) {
@@ -116,10 +104,6 @@ const createAuthTokens = async (user, sessionContext = {}) => {
   };
 };
 
-// ============================================================
-// REGISTER
-// ============================================================
-
 const register = async ({ name, email, phone, password, businessName, legalConsent }) => {
   const normalizedName = String(name || "").trim();
 
@@ -149,10 +133,6 @@ const register = async ({ name, email, phone, password, businessName, legalConse
     throw new ApiError(400, `Password must be between ${AUTH_CONSTANTS.PASSWORD_MIN_LENGTH} and ${AUTH_CONSTANTS.PASSWORD_MAX_LENGTH} characters.`);
   }
 
-  // ----------------------------------------------------------
-  // CHECK EXISTING USER
-  // ----------------------------------------------------------
-
   const existingUser = await findUserByEmail(normalizedEmail, true);
 
   if (existingUser) {
@@ -163,35 +143,17 @@ const register = async ({ name, email, phone, password, businessName, legalConse
     throw new ApiError(409, "An account with this email already exists.");
   }
 
-  // ----------------------------------------------------------
-  // CHECK EXISTING PENDING REGISTRATION
-  // ----------------------------------------------------------
-
   const existingPending = await PendingRegistration.findOne({
     email: normalizedEmail,
   });
 
-  /*
-   * We intentionally replace an existing pending registration.
-   *
-   * This allows the user to start registration again and receive
-   * a fresh OTP instead of getting stuck with stale data.
-   */
   if (existingPending) {
     await PendingRegistration.deleteOne({
       _id: existingPending._id,
     });
   }
 
-  // ----------------------------------------------------------
-  // PASSWORD
-  // ----------------------------------------------------------
-
   const passwordHash = await hashPassword(password);
-
-  // ----------------------------------------------------------
-  // OTP
-  // ----------------------------------------------------------
 
   const otp = generateOtp();
 
@@ -199,24 +161,9 @@ const register = async ({ name, email, phone, password, businessName, legalConse
 
   const otpExpiresAt = getOtpExpiry();
 
-  /*
-   * Pending registration must live longer than OTP.
-   *
-   * OTP can expire after 10 minutes, but the registration itself
-   * remains available for another OTP until the pending record
-   * expires.
-   */
   const pendingExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-  // ----------------------------------------------------------
-  // BUSINESS NAME
-  // ----------------------------------------------------------
-
   const finalBusinessName = String(businessName || "").trim() || `${normalizedName}'s Business`;
-
-  // ----------------------------------------------------------
-  // CREATE PENDING REGISTRATION
-  // ----------------------------------------------------------
 
   const pendingRegistration = await PendingRegistration.create({
     name: normalizedName,
@@ -241,27 +188,12 @@ const register = async ({ name, email, phone, password, businessName, legalConse
       pages: Array.isArray(legalConsent?.pages) ? legalConsent.pages : [],
     },
 
-    /*
-     * IMPORTANT:
-     *
-     * PendingRegistration model does NOT have a direct
-     * businessName field.
-     *
-     * Business name belongs inside registrationData.
-     */
     registrationData: {
       businessName: finalBusinessName,
     },
 
-    /*
-     * TTL expiration for the complete pending registration.
-     */
     expiresAt: pendingExpiresAt,
   });
-
-  // ----------------------------------------------------------
-  // SEND VERIFICATION EMAIL
-  // ----------------------------------------------------------
 
   try {
     await sendVerificationOtpEmail({
@@ -274,15 +206,6 @@ const register = async ({ name, email, phone, password, businessName, legalConse
       expiresInMinutes: AUTH_CONSTANTS.OTP_EXPIRY_MINUTES,
     });
   } catch (error) {
-    console.error("========================================");
-    console.error("VERIFICATION EMAIL FAILED");
-    console.error("Message:", error.message);
-    console.error("Code:", error.code || "N/A");
-    console.error("Response:", error.response || "N/A");
-    console.error("ResponseCode:", error.responseCode || "N/A");
-    console.error("Command:", error.command || "N/A");
-    console.error("========================================");
-
     await PendingRegistration.deleteOne({
       _id: pendingRegistration._id,
     });
@@ -299,10 +222,6 @@ const register = async ({ name, email, phone, password, businessName, legalConse
   };
 };
 
-// ============================================================
-// VERIFY EMAIL
-// ============================================================
-
 const verifyEmail = async ({ email, otp, deviceName = "Unknown device", userAgent = "", ipAddress = "" }) => {
   const normalizedEmail = String(email || "")
     .toLowerCase()
@@ -318,10 +237,6 @@ const verifyEmail = async ({ email, otp, deviceName = "Unknown device", userAgen
     throw new ApiError(400, "OTP is required.");
   }
 
-  // ----------------------------------------------------------
-  // FIND PENDING REGISTRATION
-  // ----------------------------------------------------------
-
   const pending = await PendingRegistration.findOne({
     email: normalizedEmail,
   }).select("+passwordHash " + "+emailVerificationOtpHash " + "+emailVerificationOtpExpiresAt " + "+emailVerificationAttempts " + "+emailVerificationLastSentAt");
@@ -336,10 +251,6 @@ const verifyEmail = async ({ email, otp, deviceName = "Unknown device", userAgen
     throw new ApiError(404, "Registration request not found or has expired. Please register again.");
   }
 
-  // ----------------------------------------------------------
-  // PENDING REGISTRATION EXPIRY
-  // ----------------------------------------------------------
-
   if (pending.expiresAt && new Date(pending.expiresAt).getTime() <= Date.now()) {
     await PendingRegistration.deleteOne({
       _id: pending._id,
@@ -348,25 +259,13 @@ const verifyEmail = async ({ email, otp, deviceName = "Unknown device", userAgen
     throw new ApiError(400, "Registration has expired. Please register again.");
   }
 
-  // ----------------------------------------------------------
-  // OTP ATTEMPTS
-  // ----------------------------------------------------------
-
   if (pending.emailVerificationAttempts >= AUTH_CONSTANTS.OTP_MAX_ATTEMPTS) {
     throw new ApiError(429, "Too many incorrect OTP attempts. Please request a new OTP.");
   }
 
-  // ----------------------------------------------------------
-  // OTP EXPIRY
-  // ----------------------------------------------------------
-
   if (isOtpExpired(pending.emailVerificationOtpExpiresAt)) {
     throw new ApiError(400, "OTP has expired. Please request a new OTP.");
   }
-
-  // ----------------------------------------------------------
-  // VERIFY OTP
-  // ----------------------------------------------------------
 
   const submittedOtpHash = hashOtp(normalizedOtp);
 
@@ -378,27 +277,15 @@ const verifyEmail = async ({ email, otp, deviceName = "Unknown device", userAgen
     throw new ApiError(400, "Invalid OTP.");
   }
 
-  // ----------------------------------------------------------
-  // DOUBLE CHECK USER
-  // ----------------------------------------------------------
-
   const existingUser = await findUserByEmail(normalizedEmail, true);
 
   if (existingUser) {
     throw new ApiError(409, "An account with this email already exists.");
   }
 
-  // ----------------------------------------------------------
-  // REGISTRATION DATA
-  // ----------------------------------------------------------
-
   const registrationData = pending.registrationData && typeof pending.registrationData === "object" ? pending.registrationData : {};
 
   const finalBusinessName = String(registrationData.businessName || "").trim() || `${pending.name}'s Business`;
-
-  // ----------------------------------------------------------
-  // CREATE USER
-  // ----------------------------------------------------------
 
   let user = null;
 
@@ -412,9 +299,6 @@ const verifyEmail = async ({ email, otp, deviceName = "Unknown device", userAgen
 
       phone: pending.phone || null,
 
-      /*
-       * Password was already hashed during registration.
-       */
       password: pending.passwordHash,
 
       emailVerified: true,
@@ -441,21 +325,6 @@ const verifyEmail = async ({ email, otp, deviceName = "Unknown device", userAgen
 
       status: "ACTIVE",
     });
-
-    // --------------------------------------------------------
-    // CREATE BUSINESS
-    // --------------------------------------------------------
-
-    /*
-     * businessService.createBusiness() automatically:
-     *
-     * 1. Creates Business
-     * 2. Gets/creates Business Owner Role
-     * 3. Creates Owner BusinessMember
-     * 4. Creates Default Settings
-     *
-     * Therefore auth.service must NOT create these again.
-     */
 
     business = await businessService.createBusiness({
       name: finalBusinessName,
@@ -493,17 +362,9 @@ const verifyEmail = async ({ email, otp, deviceName = "Unknown device", userAgen
       settings: {},
     });
 
-    // --------------------------------------------------------
-    // DELETE PENDING REGISTRATION
-    // --------------------------------------------------------
-
     await PendingRegistration.deleteOne({
       _id: pending._id,
     });
-
-    // --------------------------------------------------------
-    // CREATE LOGIN SESSION
-    // --------------------------------------------------------
 
     const tokens = await createAuthTokens(user, {
       deviceName: deviceName || "Unknown device",
@@ -513,19 +374,11 @@ const verifyEmail = async ({ email, otp, deviceName = "Unknown device", userAgen
       ipAddress: ipAddress || "",
     });
 
-    // --------------------------------------------------------
-    // UPDATE LAST LOGIN
-    // --------------------------------------------------------
-
     const updatedUser = await updateUserById(user._id, {
       lastLoginAt: new Date(),
     });
 
     const finalUser = updatedUser || user;
-
-    // --------------------------------------------------------
-    // FINAL RESPONSE
-    // --------------------------------------------------------
 
     const userIsMasterAdmin = isMasterAdmin(finalUser._id);
 
@@ -553,31 +406,15 @@ const verifyEmail = async ({ email, otp, deviceName = "Unknown device", userAgen
       ...tokens,
     };
   } catch (error) {
-    /*
-     * If User was created but business onboarding failed,
-     * businessService is responsible for its own business-side
-     * cleanup.
-     */
-
     if (user?._id) {
       try {
         await user.deleteOne();
-      } catch (cleanupError) {
-        console.error("User cleanup after registration failure failed:", cleanupError.message);
-      }
+      } catch (cleanupError) {}
     }
 
-    /*
-     * Keep pending registration so the user can retry if
-     * onboarding/session creation fails.
-     */
     throw error;
   }
 };
-
-// ============================================================
-// RESEND OTP
-// ============================================================
 
 const resendOtp = async ({ email }) => {
   const normalizedEmail = String(email || "")
@@ -596,10 +433,6 @@ const resendOtp = async ({ email }) => {
     throw new ApiError(404, "Registration request not found. Please register again.");
   }
 
-  // ----------------------------------------------------------
-  // PENDING REGISTRATION EXPIRY
-  // ----------------------------------------------------------
-
   if (pending.expiresAt && new Date(pending.expiresAt).getTime() <= Date.now()) {
     await PendingRegistration.deleteOne({
       _id: pending._id,
@@ -607,10 +440,6 @@ const resendOtp = async ({ email }) => {
 
     throw new ApiError(400, "Registration has expired. Please register again.");
   }
-
-  // ----------------------------------------------------------
-  // RESEND COOLDOWN
-  // ----------------------------------------------------------
 
   if (pending.emailVerificationLastSentAt) {
     const elapsedSeconds = (Date.now() - new Date(pending.emailVerificationLastSentAt).getTime()) / 1000;
@@ -622,10 +451,6 @@ const resendOtp = async ({ email }) => {
     }
   }
 
-  // ----------------------------------------------------------
-  // NEW OTP
-  // ----------------------------------------------------------
-
   const otp = generateOtp();
 
   pending.emailVerificationOtpHash = hashOtp(otp);
@@ -636,17 +461,9 @@ const resendOtp = async ({ email }) => {
 
   pending.emailVerificationLastSentAt = new Date();
 
-  /*
-   * Keep the pending registration alive for another
-   * 30 minutes after a successful resend.
-   */
   pending.expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
   await pending.save();
-
-  // ----------------------------------------------------------
-  // SEND EMAIL
-  // ----------------------------------------------------------
 
   try {
     await sendVerificationOtpEmail({
@@ -659,8 +476,6 @@ const resendOtp = async ({ email }) => {
       expiresInMinutes: AUTH_CONSTANTS.OTP_EXPIRY_MINUTES,
     });
   } catch (error) {
-    console.error("Verification resend email failed:", error.message);
-
     throw new ApiError(500, "Verification email could not be sent.");
   }
 
@@ -670,10 +485,6 @@ const resendOtp = async ({ email }) => {
     emailVerificationRequired: true,
   };
 };
-
-// ============================================================
-// LOGIN
-// ============================================================
 
 const login = async ({ email, password }, sessionContext = {}) => {
   const normalizedEmail = String(email || "")
@@ -731,10 +542,6 @@ const login = async ({ email, password }, sessionContext = {}) => {
   };
 };
 
-// ============================================================
-// REFRESH TOKEN
-// ============================================================
-
 const refresh = async (refreshToken) => {
   if (!refreshToken) {
     throw new ApiError(401, "Refresh token is required.");
@@ -764,10 +571,6 @@ const refresh = async (refreshToken) => {
     throw new ApiError(401, "Your account is not available for this session.");
   }
 
-  // ----------------------------------------------------------
-  // ROTATE REFRESH TOKEN
-  // ----------------------------------------------------------
-
   await sessionService.revoke({
     userId: decoded.userId,
 
@@ -793,10 +596,6 @@ const refresh = async (refreshToken) => {
   };
 };
 
-// ============================================================
-// LOGOUT
-// ============================================================
-
 const logout = async (userId, sessionId = null) => {
   if (!userId) {
     throw new ApiError(401, "Authentication required.");
@@ -809,26 +608,15 @@ const logout = async (userId, sessionId = null) => {
 
         sessionId,
       });
-    } catch (_error) {
-      /*
-       * Logout remains idempotent.
-       */
-    }
+    } catch (_error) {}
   } else {
     await sessionService.revokeAll(userId);
   }
 
-  /*
-   * Legacy refresh token cleanup.
-   */
   await updateUserById(userId, {
     refreshTokenHash: null,
   });
 };
-
-// ============================================================
-// CURRENT USER
-// ============================================================
 
 const getCurrentUser = async (userId) => {
   if (!userId) {
@@ -852,10 +640,6 @@ const getCurrentUser = async (userId) => {
   };
 };
 
-// ============================================================
-// UPDATE PROFILE
-// ============================================================
-
 const updateProfile = async (userId, { name, phone, profileImage, profileImagePublicId }) => {
   const user = await findUserById(userId);
 
@@ -864,10 +648,6 @@ const updateProfile = async (userId, { name, phone, profileImage, profileImagePu
   }
 
   const updates = {};
-
-  // ----------------------------------------------------------
-  // NAME
-  // ----------------------------------------------------------
 
   if (name !== undefined) {
     const normalizedName = String(name).trim();
@@ -883,10 +663,6 @@ const updateProfile = async (userId, { name, phone, profileImage, profileImagePu
     updates.name = normalizedName;
   }
 
-  // ----------------------------------------------------------
-  // PHONE
-  // ----------------------------------------------------------
-
   if (phone !== undefined) {
     const normalizedPhone = phone === null ? null : String(phone).trim();
 
@@ -896,10 +672,6 @@ const updateProfile = async (userId, { name, phone, profileImage, profileImagePu
 
     updates.phone = normalizedPhone || null;
   }
-
-  // ----------------------------------------------------------
-  // PROFILE IMAGE
-  // ----------------------------------------------------------
 
   const imageWasProvided = profileImage !== undefined || profileImagePublicId !== undefined;
 
@@ -923,17 +695,9 @@ const updateProfile = async (userId, { name, phone, profileImage, profileImagePu
     }
   }
 
-  // ----------------------------------------------------------
-  // NO CHANGES
-  // ----------------------------------------------------------
-
   if (Object.keys(updates).length === 0) {
     throw new ApiError(400, "No profile changes were provided.");
   }
-
-  // ----------------------------------------------------------
-  // UPDATE USER
-  // ----------------------------------------------------------
 
   const updatedUser = await updateUserById(userId, updates);
 
@@ -941,24 +705,14 @@ const updateProfile = async (userId, { name, phone, profileImage, profileImagePu
     throw new ApiError(404, "User account not found.");
   }
 
-  // ----------------------------------------------------------
-  // DELETE OLD CLOUDINARY IMAGE
-  // ----------------------------------------------------------
-
   if (imageWasProvided && oldProfileImagePublicId && oldProfileImagePublicId !== updatedUser.profileImagePublicId) {
     try {
       await cloudinaryService.deleteProfileImage(oldProfileImagePublicId);
-    } catch (error) {
-      console.error("Old profile image deletion failed:", error.message);
-    }
+    } catch (error) {}
   }
 
   return sanitizeUser(updatedUser);
 };
-
-// ============================================================
-// REMOVE PROFILE IMAGE
-// ============================================================
 
 const removeProfileImage = async (userId) => {
   const user = await findUserById(userId);
@@ -982,17 +736,11 @@ const removeProfileImage = async (userId) => {
   if (publicId) {
     try {
       await cloudinaryService.deleteProfileImage(publicId);
-    } catch (error) {
-      console.error("Profile image deletion failed:", error.message);
-    }
+    } catch (error) {}
   }
 
   return sanitizeUser(updatedUser);
 };
-
-// ============================================================
-// EXPORTS
-// ============================================================
 
 module.exports = {
   register,

@@ -8,19 +8,10 @@ const ACTIVITY_STATUSES = ["PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
 
 const ACTIVITY_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 
-/*
- * Business ID
- */
 const businessIdValidator = [param("businessId").matches(objectIdRegex).withMessage("Invalid business ID.")];
 
-/*
- * Activity ID
- */
 const activityIdValidator = [param("activityId").matches(objectIdRegex).withMessage("Invalid activity ID.")];
 
-/*
- * Common pagination/list validators
- */
 const paginationValidators = [
   query("page").optional().isInt({ min: 1 }).withMessage("Page must be a positive integer."),
 
@@ -55,9 +46,6 @@ const paginationValidators = [
   query("dealId").optional().matches(objectIdRegex).withMessage("Invalid deal ID."),
 ];
 
-/*
- * Create activity
- */
 const createActivityValidator = [
   ...businessIdValidator,
 
@@ -162,9 +150,6 @@ const createActivityValidator = [
     .withMessage("Metadata must be an object."),
 ];
 
-/*
- * Update activity
- */
 const updateActivityValidator = [
   ...businessIdValidator,
   ...activityIdValidator,
@@ -202,10 +187,6 @@ const updateActivityValidator = [
     .isISO8601()
     .withMessage("Invalid due date."),
 
-  /*
-   * null is intentionally allowed here
-   * so frontend can unassign a user.
-   */
   body("assignedTo")
     .optional({
       nullable: true,
@@ -222,10 +203,6 @@ const updateActivityValidator = [
       return true;
     }),
 
-  /*
-   * null is intentionally allowed so
-   * related records can be unlinked.
-   */
   body("contactId")
     .optional({
       nullable: true,
@@ -336,9 +313,6 @@ const updateActivityValidator = [
     .withMessage("Metadata must be an object."),
 ];
 
-/*
- * Complete activity
- */
 const completeActivityValidator = [
   ...businessIdValidator,
   ...activityIdValidator,

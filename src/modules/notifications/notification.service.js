@@ -68,9 +68,7 @@ const createNotification = async ({ businessId, userId, data }) => {
   await validateRecipient(businessId, recipientId);
 
   const creator = await User.findById(userId).select("name firstName lastName email").lean();
-  const member = await BusinessMember.findOne({ businessId, userId, status: "ACTIVE" })
-    .populate("roleId", "name slug")
-    .lean();
+  const member = await BusinessMember.findOne({ businessId, userId, status: "ACTIVE" }).populate("roleId", "name slug").lean();
   const creatorName = creator?.name || [creator?.firstName, creator?.lastName].filter(Boolean).join(" ").trim() || creator?.email || null;
 
   const notification = await Notification.create({
@@ -141,7 +139,11 @@ const getNotifications = async ({ businessId, userId, recipientId, status, type,
     .map(String);
   const uniqueActorIds = [...new Set(actorIds)];
   const [actors, members] = await Promise.all([
-    uniqueActorIds.length ? User.find({ _id: { $in: uniqueActorIds } }).select("name firstName lastName email").lean() : [],
+    uniqueActorIds.length
+      ? User.find({ _id: { $in: uniqueActorIds } })
+          .select("name firstName lastName email")
+          .lean()
+      : [],
     uniqueActorIds.length
       ? BusinessMember.find({ businessId, userId: { $in: uniqueActorIds }, status: "ACTIVE" })
           .populate("roleId", "name slug")
@@ -152,14 +154,22 @@ const getNotifications = async ({ businessId, userId, recipientId, status, type,
   const memberByUser = new Map(members.map((item) => [String(item.userId), item]));
 
   const teamIds = notifications.filter((item) => item?.source?.type === "TEAM" && item?.source?.id).map((item) => item.source.id);
-  const teams = teamIds.length ? await Team.find({ _id: { $in: teamIds }, businessId }).select("name slug").lean() : [];
+  const teams = teamIds.length
+    ? await Team.find({ _id: { $in: teamIds }, businessId })
+        .select("name slug")
+        .lean()
+    : [];
   const teamById = new Map(teams.map((item) => [String(item._id), item]));
 
   const automationIds = notifications
-    .filter((item) => item?.source?.type === "AUTOMATION" ? item?.source?.id : item?.metadata?.automationId)
+    .filter((item) => (item?.source?.type === "AUTOMATION" ? item?.source?.id : item?.metadata?.automationId))
     .map((item) => item?.source?.id || item?.metadata?.automationId)
     .filter(Boolean);
-  const automations = automationIds.length ? await Automation.find({ _id: { $in: automationIds }, businessId }).select("name").lean() : [];
+  const automations = automationIds.length
+    ? await Automation.find({ _id: { $in: automationIds }, businessId })
+        .select("name")
+        .lean()
+    : [];
   const automationById = new Map(automations.map((item) => [String(item._id), item]));
 
   const enrichedNotifications = notifications.map((item) => {
@@ -243,7 +253,9 @@ const getNotificationById = async ({ businessId, userId, notificationId }) => {
     _id: notificationId,
     businessId,
     recipientId: userId,
-  }).populate("createdBy", "name firstName lastName email").lean();
+  })
+    .populate("createdBy", "name firstName lastName email")
+    .lean();
 
   if (!notification) {
     throw new ApiError(404, "Notification not found");
@@ -261,12 +273,8 @@ const getNotificationById = async ({ businessId, userId, notificationId }) => {
     };
   } else {
     const sourceActorId = notification?.source?.id || notification?.metadata?.actorId || notification?.createdBy?._id || null;
-    const actor = sourceActorId
-      ? await User.findById(sourceActorId).select("name firstName lastName email").lean()
-      : notification?.createdBy || null;
-    const member = sourceActorId
-      ? await BusinessMember.findOne({ businessId, userId: sourceActorId, status: "ACTIVE" }).populate("roleId", "name slug").lean()
-      : null;
+    const actor = sourceActorId ? await User.findById(sourceActorId).select("name firstName lastName email").lean() : notification?.createdBy || null;
+    const member = sourceActorId ? await BusinessMember.findOne({ businessId, userId: sourceActorId, status: "ACTIVE" }).populate("roleId", "name slug").lean() : null;
     notification.source = {
       type: notification?.source?.type || "USER",
       id: sourceActorId,

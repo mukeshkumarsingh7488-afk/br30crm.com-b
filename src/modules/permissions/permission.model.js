@@ -83,13 +83,6 @@ const permissionSchema = new mongoose.Schema(
   }
 );
 
-/*
- * System permissions:
- * businessId = null
- *
- * Custom business permissions:
- * businessId = specific business ID
- */
 permissionSchema.index({ businessId: 1, slug: 1 }, { unique: true });
 
 permissionSchema.index({

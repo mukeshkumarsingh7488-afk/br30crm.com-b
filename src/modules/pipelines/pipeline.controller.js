@@ -59,7 +59,7 @@ const deleteStage = asyncHandler(async (req, res) => {
 const deletePipeline = asyncHandler(async (req, res) => {
   const pipeline = await pipelineService.deletePipeline(req.params.pipelineId, req.params.businessId, req.user.userId);
 
-  return ApiResponse.success(res, { pipeline }, "Pipeline deactivated successfully.");
+  return ApiResponse.success(res, { pipeline }, "Pipeline deleted successfully.");
 });
 
 module.exports = {

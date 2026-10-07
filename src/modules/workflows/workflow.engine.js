@@ -4,13 +4,139 @@ const WorkflowExecution = require("./workflow-execution.model");
 const { executeAction } = require("../../automation/engine");
 const { enqueue } = require("../../jobs/job.service");
 const { publish } = require("../../events/eventBus");
-const operators = ["equals","not_equals","contains","not_contains","starts_with","ends_with","greater_than","less_than","greater_than_or_equal","less_than_or_equal","is_empty","is_not_empty","in","not_in"];
-const valueAt=(o,p)=>String(p||"").split(".").reduce((v,k)=>v==null?undefined:v[k],o);
-const match=(a,o,b)=>{if(o==="is_empty")return a==null||a===""||(Array.isArray(a)&&!a.length);if(o==="is_not_empty")return !(a==null||a===""||(Array.isArray(a)&&!a.length));if(o==="equals")return String(a)===String(b);if(o==="not_equals")return String(a)!==String(b);if(o==="contains")return Array.isArray(a)?a.map(String).includes(String(b)):String(a??"").toLowerCase().includes(String(b??"").toLowerCase());if(o==="not_contains")return !String(a??"").toLowerCase().includes(String(b??"").toLowerCase());if(o==="starts_with")return String(a??"").toLowerCase().startsWith(String(b??"").toLowerCase());if(o==="ends_with")return String(a??"").toLowerCase().endsWith(String(b??"").toLowerCase());if(o==="greater_than")return Number(a)>Number(b);if(o==="less_than")return Number(a)<Number(b);if(o==="greater_than_or_equal")return Number(a)>=Number(b);if(o==="less_than_or_equal")return Number(a)<=Number(b);if(o==="in")return Array.isArray(b)&&b.map(String).includes(String(a));if(o==="not_in")return Array.isArray(b)&&!b.map(String).includes(String(a));return false};
-const pass=(wf,p)=>{if(!wf.conditions?.length)return true;const r=wf.conditions.map(c=>match(valueAt(p.record||{},c.field),c.operator,c.value));return wf.conditionLogic==="OR"?r.some(Boolean):r.every(Boolean)};
-const processWorkflow=async(wf,payload,event,options={})=>{if(!wf||(wf.status!=="ACTIVE"&&!options.manual))return{status:"SKIPPED",reason:"inactive"};if(!options.manual&&wf.trigger.mode!=="EVENT")return{status:"SKIPPED",reason:"not_event_trigger"};if(!options.manual&&`${wf.trigger.entity}.${wf.trigger.event}`!==String(event).toLowerCase())return{status:"SKIPPED",reason:"event_mismatch"};if(!pass(wf,payload))return{status:"SKIPPED",reason:"conditions"};if(payload.entityId&&wf.execution.maxRunsPerRecord){const n=await WorkflowExecution.countDocuments({workflowId:wf._id,entityId:payload.entityId,status:"SUCCESS"});if(n>=wf.execution.maxRunsPerRecord)return{status:"SKIPPED",reason:"max_runs_per_record"};}if(wf.execution?.cooldownSeconds&&wf.lastExecutedAt&&Date.now()-new Date(wf.lastExecutedAt).getTime()<wf.execution.cooldownSeconds*1000)return{status:"SKIPPED",reason:"cooldown"};const started=new Date();const ex=await WorkflowExecution.create({businessId:payload.businessId,workflowId:wf._id,entity:payload.entity,entityId:payload.entityId||null,event,actorId:payload.actorId||null,status:"RUNNING",startedAt:started});const results=[];try{for(let i=0;i<wf.steps.length;i++){const s=wf.steps[i];if(s.delaySeconds>0){await enqueue("WORKFLOW_EXECUTE",{workflowId:wf._id.toString(),executionId:ex._id.toString(),payload,event,stepIndex:i+1},{runAt:new Date(Date.now()+s.delaySeconds*1000),maxAttempts:1});ex.currentStep=i+1;ex.status="SUCCESS";ex.actionResults=results.concat([{type:s.type,status:"SCHEDULED",delaySeconds:s.delaySeconds}]);ex.completedAt=new Date();ex.durationMs=Date.now()-started.getTime();await ex.save();await Workflow.updateOne({_id:wf._id},{$inc:{"stats.totalRuns":1,"stats.successRuns":1},$set:{lastExecutedAt:new Date(),lastExecutionStatus:"SUCCESS",lastExecutionError:null}});return{status:"SUCCESS",executionId:ex._id,scheduled:true}}try { const r=await executeAction({automation:{_id:wf._id,name:wf.name},payload,action:{type:s.type,config:s.config||{},delaySeconds:0}}); results.push(r); } catch (error) { results.push({type:s.type,status:"FAILED",error:error.message}); if (!s.continueOnError && wf.execution.stopOnError) throw error; } ex.currentStep=i+1;}ex.status="SUCCESS";ex.actionResults=results;ex.completedAt=new Date();ex.durationMs=Date.now()-started.getTime();await ex.save();await Workflow.updateOne({_id:wf._id},{$inc:{"stats.totalRuns":1,"stats.successRuns":1},$set:{lastExecutedAt:new Date(),lastExecutionStatus:"SUCCESS",lastExecutionError:null}});await publish(`workflow.${payload.entity||wf.trigger.entity}.${wf.trigger.event}`,{businessId:payload.businessId,entity:payload.entity,entityId:payload.entityId,workflowId:wf._id.toString(),executionId:ex._id.toString(),actorId:payload.actorId});return{status:"SUCCESS",executionId:ex._id}}catch(e){ex.status="FAILED";ex.error=e.message;ex.actionResults=results;ex.completedAt=new Date();ex.durationMs=Date.now()-started.getTime();await ex.save();await Workflow.updateOne({_id:wf._id},{$inc:{"stats.totalRuns":1,"stats.failedRuns":1},$set:{lastExecutedAt:new Date(),lastExecutionStatus:"FAILED",lastExecutionError:e.message}});return{status:"FAILED",executionId:ex._id,error:e.message}}};
-const processWorkflowEvent=async(payload,event)=>{const [entity,eventName]=String(event).toLowerCase().split(".");if(!payload?.businessId||!entity||!eventName)return;const wfs=await Workflow.find({businessId:payload.businessId,status:"ACTIVE","trigger.mode":"EVENT","trigger.entity":entity,"trigger.event":eventName}).limit(100);for(const wf of wfs)await processWorkflow(wf,payload,event);};
-const continueWorkflow=async({workflowId,executionId,payload,event,stepIndex=0})=>{const wf=await Workflow.findById(workflowId);const ex=await WorkflowExecution.findById(executionId);if(!wf||!ex)throw new Error("Workflow execution context not found");for(let i=stepIndex;i<wf.steps.length;i++){const s=wf.steps[i];if(s.delaySeconds>0){await enqueue("WORKFLOW_EXECUTE",{workflowId,executionId,payload,event,stepIndex:i+1},{runAt:new Date(Date.now()+s.delaySeconds*1000),maxAttempts:1});return;}const r=await executeAction({automation:{_id:wf._id,name:wf.name},payload,action:{type:s.type,config:s.config||{}}});ex.actionResults.push(r);ex.currentStep=i+1;}ex.status="SUCCESS";ex.completedAt=new Date();ex.durationMs=ex.completedAt.getTime()-ex.startedAt.getTime();await ex.save();await Workflow.updateOne({_id:wf._id},{$inc:{"stats.successRuns":1},$set:{lastExecutedAt:new Date(),lastExecutionStatus:"SUCCESS",lastExecutionError:null}});};
-const runScheduledWorkflows=async(limit=25)=>{const now=new Date();const workflows=await Workflow.find({status:"ACTIVE","trigger.mode":"SCHEDULE","trigger.schedule.enabled":true,"trigger.schedule.nextRunAt":{$lte:now},$or:[{"trigger.schedule.endAt":null},{"trigger.schedule.endAt":{$gt:now}}]}).limit(limit);for(const wf of workflows){const payload={businessId:wf.businessId,entity:wf.trigger.entity,entityId:null,record:{},actorId:wf.updatedBy||wf.createdBy};await processWorkflow(wf,payload,"schedule.execute",{manual:true});const interval=Number(wf.trigger.schedule.intervalSeconds||0);const next=interval?new Date(Date.now()+interval*1000):null;await Workflow.updateOne({_id:wf._id},{$set:{"trigger.schedule.nextRunAt":next,...(next?{}:{status:"INACTIVE"})}});}return workflows.length;};
+const operators = ["equals", "not_equals", "contains", "not_contains", "starts_with", "ends_with", "greater_than", "less_than", "greater_than_or_equal", "less_than_or_equal", "is_empty", "is_not_empty", "in", "not_in"];
+const valueAt = (o, p) =>
+  String(p || "")
+    .split(".")
+    .reduce((v, k) => (v == null ? undefined : v[k]), o);
+const match = (a, o, b) => {
+  if (o === "is_empty") return a == null || a === "" || (Array.isArray(a) && !a.length);
+  if (o === "is_not_empty") return !(a == null || a === "" || (Array.isArray(a) && !a.length));
+  if (o === "equals") return String(a) === String(b);
+  if (o === "not_equals") return String(a) !== String(b);
+  if (o === "contains")
+    return Array.isArray(a)
+      ? a.map(String).includes(String(b))
+      : String(a ?? "")
+          .toLowerCase()
+          .includes(String(b ?? "").toLowerCase());
+  if (o === "not_contains")
+    return !String(a ?? "")
+      .toLowerCase()
+      .includes(String(b ?? "").toLowerCase());
+  if (o === "starts_with")
+    return String(a ?? "")
+      .toLowerCase()
+      .startsWith(String(b ?? "").toLowerCase());
+  if (o === "ends_with")
+    return String(a ?? "")
+      .toLowerCase()
+      .endsWith(String(b ?? "").toLowerCase());
+  if (o === "greater_than") return Number(a) > Number(b);
+  if (o === "less_than") return Number(a) < Number(b);
+  if (o === "greater_than_or_equal") return Number(a) >= Number(b);
+  if (o === "less_than_or_equal") return Number(a) <= Number(b);
+  if (o === "in") return Array.isArray(b) && b.map(String).includes(String(a));
+  if (o === "not_in") return Array.isArray(b) && !b.map(String).includes(String(a));
+  return false;
+};
+const pass = (wf, p) => {
+  if (!wf.conditions?.length) return true;
+  const r = wf.conditions.map((c) => match(valueAt(p.record || {}, c.field), c.operator, c.value));
+  return wf.conditionLogic === "OR" ? r.some(Boolean) : r.every(Boolean);
+};
+const processWorkflow = async (wf, payload, event, options = {}) => {
+  if (!wf || (wf.status !== "ACTIVE" && !options.manual)) return { status: "SKIPPED", reason: "inactive" };
+  if (!options.manual && wf.trigger.mode !== "EVENT") return { status: "SKIPPED", reason: "not_event_trigger" };
+  if (!options.manual && `${wf.trigger.entity}.${wf.trigger.event}` !== String(event).toLowerCase()) return { status: "SKIPPED", reason: "event_mismatch" };
+  if (!pass(wf, payload)) return { status: "SKIPPED", reason: "conditions" };
+  if (payload.entityId && wf.execution.maxRunsPerRecord) {
+    const n = await WorkflowExecution.countDocuments({ workflowId: wf._id, entityId: payload.entityId, status: "SUCCESS" });
+    if (n >= wf.execution.maxRunsPerRecord) return { status: "SKIPPED", reason: "max_runs_per_record" };
+  }
+  if (wf.execution?.cooldownSeconds && wf.lastExecutedAt && Date.now() - new Date(wf.lastExecutedAt).getTime() < wf.execution.cooldownSeconds * 1000) return { status: "SKIPPED", reason: "cooldown" };
+  const started = new Date();
+  const ex = await WorkflowExecution.create({ businessId: payload.businessId, workflowId: wf._id, entity: payload.entity, entityId: payload.entityId || null, event, actorId: payload.actorId || null, status: "RUNNING", startedAt: started });
+  const results = [];
+  try {
+    for (let i = 0; i < wf.steps.length; i++) {
+      const s = wf.steps[i];
+      if (s.delaySeconds > 0) {
+        await enqueue("WORKFLOW_EXECUTE", { workflowId: wf._id.toString(), executionId: ex._id.toString(), payload, event, stepIndex: i + 1 }, { runAt: new Date(Date.now() + s.delaySeconds * 1000), maxAttempts: 1 });
+        ex.currentStep = i + 1;
+        ex.status = "SUCCESS";
+        ex.actionResults = results.concat([{ type: s.type, status: "SCHEDULED", delaySeconds: s.delaySeconds }]);
+        ex.completedAt = new Date();
+        ex.durationMs = Date.now() - started.getTime();
+        await ex.save();
+        await Workflow.updateOne({ _id: wf._id }, { $inc: { "stats.totalRuns": 1, "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } });
+        return { status: "SUCCESS", executionId: ex._id, scheduled: true };
+      }
+      try {
+        const r = await executeAction({ automation: { _id: wf._id, name: wf.name }, payload, action: { type: s.type, config: s.config || {}, delaySeconds: 0 } });
+        results.push(r);
+      } catch (error) {
+        results.push({ type: s.type, status: "FAILED", error: error.message });
+        if (!s.continueOnError && wf.execution.stopOnError) throw error;
+      }
+      ex.currentStep = i + 1;
+    }
+    ex.status = "SUCCESS";
+    ex.actionResults = results;
+    ex.completedAt = new Date();
+    ex.durationMs = Date.now() - started.getTime();
+    await ex.save();
+    await Workflow.updateOne({ _id: wf._id }, { $inc: { "stats.totalRuns": 1, "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } });
+    await publish(`workflow.${payload.entity || wf.trigger.entity}.${wf.trigger.event}`, { businessId: payload.businessId, entity: payload.entity, entityId: payload.entityId, workflowId: wf._id.toString(), executionId: ex._id.toString(), actorId: payload.actorId });
+    return { status: "SUCCESS", executionId: ex._id };
+  } catch (e) {
+    ex.status = "FAILED";
+    ex.error = e.message;
+    ex.actionResults = results;
+    ex.completedAt = new Date();
+    ex.durationMs = Date.now() - started.getTime();
+    await ex.save();
+    await Workflow.updateOne({ _id: wf._id }, { $inc: { "stats.totalRuns": 1, "stats.failedRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "FAILED", lastExecutionError: e.message } });
+    return { status: "FAILED", executionId: ex._id, error: e.message };
+  }
+};
+const processWorkflowEvent = async (payload, event) => {
+  const [entity, eventName] = String(event).toLowerCase().split(".");
+  if (!payload?.businessId || !entity || !eventName) return;
+  const wfs = await Workflow.find({ businessId: payload.businessId, status: "ACTIVE", "trigger.mode": "EVENT", "trigger.entity": entity, "trigger.event": eventName }).limit(100);
+  for (const wf of wfs) await processWorkflow(wf, payload, event);
+};
+const continueWorkflow = async ({ workflowId, executionId, payload, event, stepIndex = 0 }) => {
+  const wf = await Workflow.findById(workflowId);
+  const ex = await WorkflowExecution.findById(executionId);
+  if (!wf || !ex) throw new Error("Workflow execution context not found");
+  for (let i = stepIndex; i < wf.steps.length; i++) {
+    const s = wf.steps[i];
+    if (s.delaySeconds > 0) {
+      await enqueue("WORKFLOW_EXECUTE", { workflowId, executionId, payload, event, stepIndex: i + 1 }, { runAt: new Date(Date.now() + s.delaySeconds * 1000), maxAttempts: 1 });
+      return;
+    }
+    const r = await executeAction({ automation: { _id: wf._id, name: wf.name }, payload, action: { type: s.type, config: s.config || {} } });
+    ex.actionResults.push(r);
+    ex.currentStep = i + 1;
+  }
+  ex.status = "SUCCESS";
+  ex.completedAt = new Date();
+  ex.durationMs = ex.completedAt.getTime() - ex.startedAt.getTime();
+  await ex.save();
+  await Workflow.updateOne({ _id: wf._id }, { $inc: { "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } });
+};
+const runScheduledWorkflows = async (limit = 25) => {
+  const now = new Date();
+  const workflows = await Workflow.find({ status: "ACTIVE", "trigger.mode": "SCHEDULE", "trigger.schedule.enabled": true, "trigger.schedule.nextRunAt": { $lte: now }, $or: [{ "trigger.schedule.endAt": null }, { "trigger.schedule.endAt": { $gt: now } }] }).limit(limit);
+  for (const wf of workflows) {
+    const payload = { businessId: wf.businessId, entity: wf.trigger.entity, entityId: null, record: {}, actorId: wf.updatedBy || wf.createdBy };
+    await processWorkflow(wf, payload, "schedule.execute", { manual: true });
+    const interval = Number(wf.trigger.schedule.intervalSeconds || 0);
+    const next = interval ? new Date(Date.now() + interval * 1000) : null;
+    await Workflow.updateOne({ _id: wf._id }, { $set: { "trigger.schedule.nextRunAt": next, ...(next ? {} : { status: "INACTIVE" }) } });
+  }
+  return workflows.length;
+};
 
-module.exports={processWorkflow,processWorkflowEvent,continueWorkflow,runScheduledWorkflows,operators};
+module.exports = { processWorkflow, processWorkflowEvent, continueWorkflow, runScheduledWorkflows, operators };

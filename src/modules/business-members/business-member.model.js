@@ -60,9 +60,6 @@ const businessMemberSchema = new mongoose.Schema(
   }
 );
 
-/*
- * A user can belong to a business only once.
- */
 businessMemberSchema.index(
   {
     businessId: 1,
@@ -73,17 +70,11 @@ businessMemberSchema.index(
   }
 );
 
-/*
- * Useful for finding all active members of a business.
- */
 businessMemberSchema.index({
   businessId: 1,
   status: 1,
 });
 
-/*
- * Useful for finding all businesses of a user.
- */
 businessMemberSchema.index({
   userId: 1,
   status: 1,

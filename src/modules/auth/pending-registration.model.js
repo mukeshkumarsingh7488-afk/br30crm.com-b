@@ -62,10 +62,6 @@ const pendingRegistrationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
-
-    // ============================================================
-    // LEGAL CONSENT
-    // ============================================================
     legalConsent: {
       accepted: {
         type: Boolean,
@@ -89,14 +85,8 @@ const pendingRegistrationSchema = new mongoose.Schema(
   }
 );
 
-/*
- * Automatically delete expired pending registrations.
- */
 pendingRegistrationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-/*
- * One pending registration per email.
- */
 pendingRegistrationSchema.index({ email: 1 }, { unique: true });
 
 module.exports = mongoose.model("PendingRegistration", pendingRegistrationSchema);

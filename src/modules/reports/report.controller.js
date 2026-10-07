@@ -2,12 +2,6 @@ const asyncHandler = require("../../utils/asyncHandler");
 const ApiResponse = require("../../utils/ApiResponse");
 const s = require("./report.service");
 
-/*
- * ============================================================
- * CREATE REPORT
- * ============================================================
- */
-
 const create = asyncHandler(async (req, res) =>
   ApiResponse.created(
     res,
@@ -19,12 +13,6 @@ const create = asyncHandler(async (req, res) =>
     "Report created successfully."
   )
 );
-
-/*
- * ============================================================
- * LIST REPORTS
- * ============================================================
- */
 
 const list = asyncHandler(async (req, res) =>
   ApiResponse.success(
@@ -38,12 +26,6 @@ const list = asyncHandler(async (req, res) =>
   )
 );
 
-/*
- * ============================================================
- * RUN SAVED REPORT
- * ============================================================
- */
-
 const run = asyncHandler(async (req, res) =>
   ApiResponse.success(
     res,
@@ -55,12 +37,6 @@ const run = asyncHandler(async (req, res) =>
     "Report executed successfully."
   )
 );
-
-/*
- * ============================================================
- * SALES REPORT
- * ============================================================
- */
 
 const sales = asyncHandler(async (req, res) =>
   ApiResponse.success(
@@ -77,12 +53,6 @@ const sales = asyncHandler(async (req, res) =>
   )
 );
 
-/*
- * ============================================================
- * LEADS REPORT
- * ============================================================
- */
-
 const leads = asyncHandler(async (req, res) =>
   ApiResponse.success(
     res,
@@ -97,12 +67,6 @@ const leads = asyncHandler(async (req, res) =>
     "Leads report fetched successfully."
   )
 );
-
-/*
- * ============================================================
- * DEALS REPORT
- * ============================================================
- */
 
 const deals = asyncHandler(async (req, res) =>
   ApiResponse.success(
@@ -119,12 +83,6 @@ const deals = asyncHandler(async (req, res) =>
   )
 );
 
-/*
- * ============================================================
- * ACTIVITIES REPORT
- * ============================================================
- */
-
 const activities = asyncHandler(async (req, res) =>
   ApiResponse.success(
     res,
@@ -140,12 +98,6 @@ const activities = asyncHandler(async (req, res) =>
   )
 );
 
-/*
- * ============================================================
- * UPDATE REPORT
- * ============================================================
- */
-
 const update = asyncHandler(async (req, res) =>
   ApiResponse.success(
     res,
@@ -159,12 +111,6 @@ const update = asyncHandler(async (req, res) =>
   )
 );
 
-/*
- * ============================================================
- * DELETE REPORT
- * ============================================================
- */
-
 const remove = asyncHandler(async (req, res) =>
   ApiResponse.success(
     res,
@@ -175,12 +121,6 @@ const remove = asyncHandler(async (req, res) =>
     "Report deleted successfully."
   )
 );
-
-/*
- * ============================================================
- * EXPORTS
- * ============================================================
- */
 
 module.exports = {
   create,

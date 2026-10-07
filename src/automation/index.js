@@ -15,13 +15,31 @@ const initAutomationEngine = () => {
       const auditable = ["created", "updated", "deleted", "status_changed", "assigned", "stage_changed"].includes(action);
       const internalAutomationUpdate = module === "automation" && payload?.automationId;
       if (auditable && payload?.businessId && !internalAutomationUpdate) {
-        await createAuditLog({ businessId: payload.businessId, actorId: payload.actorId || null, action, module, entityType: payload.entity || module, entityId: payload.entityId || null, description: `${module} ${action}`, metadata: { source: "eventBus", automationId: payload.automationId || null } });
+        await createAuditLog({
+          businessId: payload.businessId,
+          actorId: payload.actorId || null,
+          action,
+          module,
+          entityType: payload.entity || module,
+          entityId: payload.entityId || null,
+          description: `${module} ${action}`,
+          metadata: { source: "eventBus", automationId: payload.automationId || null },
+        });
       }
-    } catch (error) { console.error("Audit event error:", error.message); }
-    try { await processEvent(payload, event); } catch (error) { console.error("Automation engine error:", error.message); }
-    try { await processWorkflowEvent(payload, event); } catch (error) { console.error("Workflow engine error:", error.message); }
-    try { await queueEvent(event, payload); } catch (error) { console.error("Webhook dispatch error:", error.message); }
+    } catch (error) {}
+    try {
+      await processEvent(payload, event);
+    } catch (error) {}
+    try {
+      await processWorkflowEvent(payload, event);
+    } catch (error) {}
+    try {
+      await queueEvent(event, payload);
+    } catch (error) {}
   });
 };
-const runAutomationScheduler = async () => { await runScheduledAutomations(25); await runScheduledWorkflows(25); };
+const runAutomationScheduler = async () => {
+  await runScheduledAutomations(25);
+  await runScheduledWorkflows(25);
+};
 module.exports = { initAutomationEngine, runAutomationScheduler };

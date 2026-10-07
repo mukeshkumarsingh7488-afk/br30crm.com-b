@@ -1,4 +1,22 @@
 const mongoose = require("mongoose");
-const schema = new mongoose.Schema({ businessId: { type: mongoose.Schema.Types.ObjectId, ref: "Business", required: true, index: true }, workflowId: { type: mongoose.Schema.Types.ObjectId, ref: "Workflow", required: true, index: true }, entity: String, entityId: { type: mongoose.Schema.Types.ObjectId, default: null }, event: String, actorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, status: { type: String, enum: ["RUNNING", "SUCCESS", "FAILED", "SKIPPED"], default: "RUNNING", index: true }, currentStep: { type: Number, default: 0 }, actionResults: { type: [mongoose.Schema.Types.Mixed], default: [] }, error: { type: String, maxlength: 4000, default: null }, startedAt: { type: Date, default: Date.now }, completedAt: { type: Date, default: null }, durationMs: Number, metadata: { type: mongoose.Schema.Types.Mixed, default: {} } }, { timestamps: true, versionKey: false });
+const schema = new mongoose.Schema(
+  {
+    businessId: { type: mongoose.Schema.Types.ObjectId, ref: "Business", required: true, index: true },
+    workflowId: { type: mongoose.Schema.Types.ObjectId, ref: "Workflow", required: true, index: true },
+    entity: String,
+    entityId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    event: String,
+    actorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    status: { type: String, enum: ["RUNNING", "SUCCESS", "FAILED", "SKIPPED"], default: "RUNNING", index: true },
+    currentStep: { type: Number, default: 0 },
+    actionResults: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    error: { type: String, maxlength: 4000, default: null },
+    startedAt: { type: Date, default: Date.now },
+    completedAt: { type: Date, default: null },
+    durationMs: Number,
+    metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+  },
+  { timestamps: true, versionKey: false }
+);
 schema.index({ businessId: 1, workflowId: 1, createdAt: -1 });
 module.exports = mongoose.model("WorkflowExecution", schema);

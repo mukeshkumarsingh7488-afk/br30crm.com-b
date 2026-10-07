@@ -11,4 +11,5 @@ router.post("/business/:businessId/import", v.createImport, validate, requireBus
 router.post("/business/:businessId/export", v.exportValidator, validate, requireBusinessMembership, requirePermission("exports.create"), c.exportData);
 router.get("/business/:businessId/jobs", v.list, validate, requireBusinessMembership, requirePermission("imports.view"), c.list);
 router.get("/business/:businessId/jobs/:jobId", v.job, validate, requireBusinessMembership, requirePermission("imports.view"), c.get);
+router.get("/business/:businessId/jobs/:jobId/download", v.job, validate, requireBusinessMembership, requirePermission("exports.create"), c.download);
 module.exports = router;

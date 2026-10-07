@@ -272,7 +272,6 @@ const send = async ({ businessId, userId, data = {} }) => {
       status: "SENT",
     });
 
-
     return {
       ...saved.toObject(),
       delivered: false,
@@ -281,8 +280,6 @@ const send = async ({ businessId, userId, data = {} }) => {
       message: `${channel} accepted by Brevo. Delivery status will update from webhook.`,
     };
   } catch (error) {
-    console.error(`❌ ${channel} sending failed:`, error?.message || error);
-
     throw error instanceof ApiError ? error : new ApiError(502, error?.message || `${channel} sending failed.`);
   }
 };
@@ -357,7 +354,6 @@ const markDelivered = async ({ businessId, channel, provider, providerMessageId,
 
   await communication.save();
 
-
   return communication;
 };
 
@@ -387,7 +383,6 @@ const markFailed = async ({ businessId, channel, providerMessageId, errorMessage
   };
 
   await communication.save();
-
 
   return communication;
 };

@@ -42,18 +42,11 @@ const revoke = async ({ userId, sessionId }) => {
   return s;
 };
 
-const revokeAll = async (userId) => {
-  const r = await Session.updateMany(
-    {
-      userId,
-      revokedAt: null,
-    },
-    {
-      $set: { revokedAt: new Date() },
-    }
-  );
-
-  return { revoked: r.modifiedCount };
+const revokeAll = async (userId, currentSessionId = null) => {
+  const filter = { userId, revokedAt: null };
+  if (currentSessionId) filter.sessionId = { $ne: currentSessionId };
+  const result = await Session.updateMany(filter, { $set: { revokedAt: new Date() } });
+  return { revoked: result.modifiedCount };
 };
 
 const list = async (userId) =>

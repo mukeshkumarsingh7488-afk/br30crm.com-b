@@ -6,7 +6,12 @@ const dateQueryValidators = [query("startDate").notEmpty().withMessage("startDat
 
 const businessIdValidator = [validateObjectId("businessId")];
 
-const metricValidator = [validateObjectId("businessId"), param("metric").isIn(["leads", "contacts", "companies", "deals", "tasks", "activities"]).withMessage("Invalid analytics metric"), ...dateQueryValidators];
+const metricValidator = [
+  validateObjectId("businessId"),
+  param("metric").isIn(["leads", "contacts", "companies", "deals", "tasks", "activities"]).withMessage("Invalid analytics metric"),
+  query("period").optional().isIn(["DAILY", "WEEKLY", "MONTHLY", "YEARLY", "CUSTOM"]).withMessage("Invalid analytics period"),
+  ...dateQueryValidators,
+];
 
 const snapshotIdValidator = [validateObjectId("businessId"), validateObjectId("snapshotId")];
 

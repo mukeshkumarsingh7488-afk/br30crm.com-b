@@ -511,12 +511,6 @@ const getPublicForm = async ({ businessId, slug, tracking = {} }) => {
 
   const normalizedSlug = normalizeSlug(slug);
 
-  /*
-   * Public form loading is a critical public request. Keep the two
-   * required reads parallel and do not block the response on analytics.
-   * The previous sequential business lookup + form lookup + awaited
-   * view update could hold the browser request for the full client timeout.
-   */
   const [form, business] = await Promise.all([
     PublicForm.findOne({
       businessId,
@@ -545,10 +539,6 @@ const getPublicForm = async ({ businessId, slug, tracking = {} }) => {
 
   const trackingData = getTrackingData(tracking);
 
-  /*
-   * Analytics must never delay the public form response. If the analytics
-   * write is temporarily unavailable, the form still opens normally.
-   */
   void PublicForm.updateOne(
     { _id: form._id },
     {
@@ -785,12 +775,6 @@ const submitForm = async ({ businessId, slug, data, metadata = {} }) => {
 
   const payload = data && typeof data === "object" && !Array.isArray(data) ? data : {};
 
-  /*
-   * Basic honeypot support.
-   *
-   * Frontend can render a hidden field called
-   * _website. Real users should leave it empty.
-   */
   if (form.spamProtection && payload._website) {
     throw new ApiError(400, "Unable to process this submission.");
   }
@@ -808,9 +792,6 @@ const submitForm = async ({ businessId, slug, data, metadata = {} }) => {
 
   const identity = getLeadIdentity(payload);
 
-  /*
-   * Prevent obvious duplicate submissions.
-   */
   const existingLead = await findExistingLead({
     businessId,
     email: identity.email,
@@ -889,11 +870,7 @@ const submitForm = async ({ businessId, slug, data, metadata = {} }) => {
       owner: business.ownerId,
     });
 
-    console.log("PUBLIC FORM LEAD PAYLOAD:", JSON.stringify(leadPayload, null, 2));
-
     lead = await Lead.create(leadPayload);
-
-    console.log("PUBLIC FORM LEAD CREATED:", lead._id);
   }
 
   await PublicForm.updateOne(

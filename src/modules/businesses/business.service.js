@@ -5,10 +5,6 @@ const businessMemberService = require("../business-members/business-member.servi
 const roleService = require("../roles/role.service");
 const settingService = require("../settings/setting.service");
 
-/* ============================================================
- * NORMALIZE BUSINESS SLUG
- * ============================================================ */
-
 const normalizeSlug = (value) => {
   return value
     .toString()
@@ -18,10 +14,6 @@ const normalizeSlug = (value) => {
     .replace(/^-+|-+$/g, "")
     .replace(/-+/g, "-");
 };
-
-/* ============================================================
- * GENERATE UNIQUE BUSINESS SLUG
- * ============================================================ */
 
 const generateUniqueSlug = async (name, excludeBusinessId = null) => {
   const baseSlug = normalizeSlug(name);
@@ -55,25 +47,6 @@ const generateUniqueSlug = async (name, excludeBusinessId = null) => {
   }
 };
 
-/* ============================================================
- * CREATE BUSINESS
- *
- * Registration onboarding flow:
- *
- * Create User
- *      ↓
- * Create Business
- *      ↓
- * Create Owner Role
- *      ↓
- * Create BusinessMember
- *      ↓
- * Create Default Settings
- *
- * NOTE:
- * User + PendingRegistration handling is done by auth.service.
- * ============================================================ */
-
 const createBusiness = async ({ name, legalName, businessType, industry, description, ownerId, logo, website, email, phone, address, timezone, currency, dateFormat, timeFormat, settings, createdBy }) => {
   if (!ownerId) {
     throw new ApiError(400, "Business owner is required.");
@@ -88,10 +61,6 @@ const createBusiness = async ({ name, legalName, businessType, industry, descrip
   let business = null;
 
   try {
-    /* ========================================================
-     * STEP 1 — CREATE BUSINESS
-     * ======================================================== */
-
     business = await Business.create({
       name,
       slug,
@@ -112,11 +81,6 @@ const createBusiness = async ({ name, legalName, businessType, industry, descrip
       currency: currency || "INR",
       dateFormat: dateFormat || "DD/MM/YYYY",
 
-      /*
-       * IMPORTANT:
-       * Setting model accepts only:
-       * "12h" or "24h"
-       */
       timeFormat: timeFormat || "12h",
 
       settings: settings || {},
@@ -124,19 +88,11 @@ const createBusiness = async ({ name, legalName, businessType, industry, descrip
       createdBy,
     });
 
-    /* ========================================================
-     * STEP 2 — CREATE / GET OWNER ROLE
-     * ======================================================== */
-
     const ownerRole = await roleService.getBusinessOwnerRole(createdBy);
 
     if (!ownerRole?._id) {
       throw new ApiError(500, "Business Owner role could not be created or found.");
     }
-
-    /* ========================================================
-     * STEP 3 — CREATE OWNER BUSINESS MEMBER
-     * ======================================================== */
 
     await businessMemberService.addMember({
       businessId: business._id,
@@ -147,67 +103,35 @@ const createBusiness = async ({ name, legalName, businessType, industry, descrip
       createdBy,
     });
 
-    /* ========================================================
-     * STEP 4 — CREATE DEFAULT SETTINGS
-     * ======================================================== */
-
     await settingService.createDefaultSettingsForBusiness({
       businessId: business._id,
       userId: createdBy,
       business,
     });
 
-    /* ========================================================
-     * STEP 5 — RETURN BUSINESS
-     * ======================================================== */
-
     return business;
   } catch (error) {
-    /*
-     * ========================================================
-     * ONBOARDING FAILURE CLEANUP
-     *
-     * If any step after Business creation fails,
-     * remove everything created for this business.
-     *
-     * This prevents:
-     * - Business without member
-     * - Business without settings
-     * - Half-created onboarding
-     * ========================================================
-     */
-
     if (business?._id) {
       try {
         await BusinessMember.deleteMany({
           businessId: business._id,
         });
-      } catch (cleanupMemberError) {
-        // Keep original error.
-      }
+      } catch (cleanupMemberError) {}
 
       try {
         await settingService.removeSettingsForBusiness(business._id);
-      } catch (cleanupSettingsError) {
-        // Keep original error.
-      }
+      } catch (cleanupSettingsError) {}
 
       try {
         await Business.deleteOne({
           _id: business._id,
         });
-      } catch (cleanupBusinessError) {
-        // Keep original error.
-      }
+      } catch (cleanupBusinessError) {}
     }
 
     throw error;
   }
 };
-
-/* ============================================================
- * GET BUSINESS BY ID
- * ============================================================ */
 
 const getBusinessById = async (businessId) => {
   const business = await Business.findById(businessId);
@@ -218,10 +142,6 @@ const getBusinessById = async (businessId) => {
 
   return business;
 };
-
-/* ============================================================
- * GET BUSINESS FOR USER
- * ============================================================ */
 
 const getBusinessByIdForUser = async (businessId, userId) => {
   const business = await Business.findById(businessId);
@@ -237,10 +157,6 @@ const getBusinessByIdForUser = async (businessId, userId) => {
   return business;
 };
 
-/* ============================================================
- * GET BUSINESSES BY OWNER
- * ============================================================ */
-
 const getBusinessesByOwner = async (ownerId) => {
   return Business.find({
     ownerId,
@@ -248,10 +164,6 @@ const getBusinessesByOwner = async (ownerId) => {
     createdAt: -1,
   });
 };
-
-/* ============================================================
- * UPDATE BUSINESS
- * ============================================================ */
 
 const updateBusiness = async (businessId, userId, updates) => {
   const business = await getBusinessByIdForUser(businessId, userId);
@@ -266,17 +178,6 @@ const updateBusiness = async (businessId, userId, updates) => {
     }
   }
 
-  /* ========================================================
-   * NORMALIZE TIME FORMAT
-   *
-   * Accept both frontend forms:
-   * "12h" / "12h"
-   * "24h" / "24h"
-   *
-   * Store only:
-   * "12h" / "24h"
-   * ======================================================== */
-
   if (Object.prototype.hasOwnProperty.call(updateData, "timeFormat")) {
     const normalizedTimeFormat = String(updateData.timeFormat || "")
       .trim()
@@ -288,10 +189,6 @@ const updateBusiness = async (businessId, userId, updates) => {
 
     updateData.timeFormat = normalizedTimeFormat;
   }
-
-  /* ========================================================
-   * GENERATE NEW SLUG IF BUSINESS NAME CHANGES
-   * ======================================================== */
 
   if (Object.prototype.hasOwnProperty.call(updateData, "name") && updateData.name !== business.name) {
     updateData.slug = await generateUniqueSlug(updateData.name, businessId);
@@ -305,10 +202,6 @@ const updateBusiness = async (businessId, userId, updates) => {
 
   return business;
 };
-
-/* ============================================================
- * UPDATE BUSINESS STATUS
- * ============================================================ */
 
 const updateBusinessStatus = async (businessId, userId, status) => {
   const allowedStatuses = ["ACTIVE", "INACTIVE", "SUSPENDED"];
@@ -326,10 +219,6 @@ const updateBusinessStatus = async (businessId, userId, status) => {
 
   return business;
 };
-
-/* ============================================================
- * EXPORTS
- * ============================================================ */
 
 module.exports = {
   normalizeSlug,

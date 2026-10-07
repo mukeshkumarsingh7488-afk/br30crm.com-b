@@ -4,12 +4,6 @@ const ApiError = require("../../utils/ApiError");
 const Permission = require("./permission.model");
 const BusinessPermissionState = require("./business-permission-state.model");
 
-/*
- * ============================================================
- * SYSTEM PERMISSIONS
- * ============================================================
- */
-
 const LEGACY_SYSTEM_PERMISSION_SLUGS = new Set([
   "members.view",
   "members.create",
@@ -39,7 +33,6 @@ const LEGACY_SYSTEM_PERMISSION_SLUGS = new Set([
 ]);
 
 const SYSTEM_PERMISSIONS = [
-  // Dashboard
   {
     name: "Dashboard View",
     slug: "dashboard.view",
@@ -47,8 +40,6 @@ const SYSTEM_PERMISSIONS = [
     action: "view",
     description: "View CRM dashboard and business metrics.",
   },
-
-  // Leads
   {
     name: "Leads View",
     slug: "leads.view",
@@ -92,7 +83,6 @@ const SYSTEM_PERMISSIONS = [
     action: "convert",
     description: "Convert leads into contacts and companies.",
   },
-  // Lead Sources / Campaigns
   {
     name: "Lead Sources View",
     slug: "lead-sources.view",
@@ -124,7 +114,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete lead sources and campaigns.",
   },
-  // Lead Attribution
   {
     name: "Lead Attribution View",
     slug: "lead-attribution.view",
@@ -156,7 +145,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete lead attribution records.",
   },
-  // QR Codes
   {
     name: "Notifications Create",
     slug: "notifications.create",
@@ -220,7 +208,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete What's New updates.",
   },
-  // Contacts
   {
     name: "Contacts View",
     slug: "contacts.view",
@@ -257,8 +244,6 @@ const SYSTEM_PERMISSIONS = [
     action: "assign",
     description: "Assign contacts to team members.",
   },
-
-  // Companies
   {
     name: "Companies View",
     slug: "companies.view",
@@ -295,8 +280,6 @@ const SYSTEM_PERMISSIONS = [
     action: "assign",
     description: "Assign companies to team members.",
   },
-
-  // Deals
   {
     name: "Deals View",
     slug: "deals.view",
@@ -333,8 +316,6 @@ const SYSTEM_PERMISSIONS = [
     action: "assign",
     description: "Assign deals to team members.",
   },
-
-  // Pipelines
   {
     name: "Pipelines View",
     slug: "pipelines.view",
@@ -363,8 +344,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete pipelines.",
   },
-
-  // Activities
   {
     name: "Activities View",
     slug: "activities.view",
@@ -400,8 +379,6 @@ const SYSTEM_PERMISSIONS = [
     action: "complete",
     description: "Mark activities as complete.",
   },
-
-  // Tasks
   {
     name: "Tasks View",
     slug: "tasks.view",
@@ -444,8 +421,6 @@ const SYSTEM_PERMISSIONS = [
     action: "complete",
     description: "Mark tasks as complete.",
   },
-
-  // Notes
   {
     name: "Notes View",
     slug: "notes.view",
@@ -474,8 +449,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete notes.",
   },
-
-  // Tags
   {
     name: "Tags View",
     slug: "tags.view",
@@ -504,8 +477,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete tags.",
   },
-
-  // Custom Fields
   {
     name: "Custom Fields View",
     slug: "custom-fields.view",
@@ -534,8 +505,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete custom fields.",
   },
-
-  // Users
   {
     name: "Users View",
     slug: "users.view",
@@ -564,9 +533,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Remove users from a business.",
   },
-
-
-  // Teams
   {
     name: "Teams View",
     slug: "teams.view",
@@ -595,10 +561,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete teams.",
   },
-
-  // Members
-
-  // Roles
   {
     name: "Roles View",
     slug: "roles.view",
@@ -627,8 +589,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Deactivate business roles.",
   },
-
-  // Permissions
   {
     name: "Permissions View",
     slug: "permissions.view",
@@ -650,8 +610,6 @@ const SYSTEM_PERMISSIONS = [
     action: "add",
     description: "Add new permissions.",
   },
-
-  // Forms
   {
     name: "Forms View",
     slug: "forms.view",
@@ -680,8 +638,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete public forms and QR codes.",
   },
-
-  // Integrations
   {
     name: "Integrations View",
     slug: "integrations.view",
@@ -710,8 +666,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete integrations.",
   },
-
-  // Webhooks
   {
     name: "Webhooks View",
     slug: "webhooks.view",
@@ -740,8 +694,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete webhooks.",
   },
-
-  // Automations
   {
     name: "Automations View",
     slug: "automations.view",
@@ -777,8 +729,6 @@ const SYSTEM_PERMISSIONS = [
     action: "execute",
     description: "Execute automation workflows.",
   },
-
-  // Workflows
   {
     name: "Workflows View",
     slug: "workflows.view",
@@ -814,8 +764,6 @@ const SYSTEM_PERMISSIONS = [
     action: "execute",
     description: "Execute workflows.",
   },
-
-  // Notifications
   {
     name: "Notifications View",
     slug: "notifications.view",
@@ -830,8 +778,6 @@ const SYSTEM_PERMISSIONS = [
     action: "manage",
     description: "Manage notification settings.",
   },
-
-  // Files
   {
     name: "Files View",
     slug: "files.view",
@@ -860,8 +806,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete files.",
   },
-
-  // Analytics
   {
     name: "Analytics View",
     slug: "analytics.view",
@@ -869,9 +813,6 @@ const SYSTEM_PERMISSIONS = [
     action: "view",
     description: "View business analytics and reports.",
   },
-
-
-  // Audit
   {
     name: "Audit View",
     slug: "audit.view",
@@ -879,8 +820,6 @@ const SYSTEM_PERMISSIONS = [
     action: "view",
     description: "View audit logs.",
   },
-
-  // API Keys
   {
     name: "API Keys View",
     slug: "api-keys.view",
@@ -909,8 +848,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Revoke business API keys.",
   },
-
-  // Invitations
   {
     name: "Invitations View",
     slug: "invitations.view",
@@ -932,8 +869,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Cancel invitations.",
   },
-
-  // Settings
   {
     name: "Settings View",
     slug: "settings.view",
@@ -955,8 +890,6 @@ const SYSTEM_PERMISSIONS = [
     action: "update",
     description: "Update business settings.",
   },
-
-  // Search
   {
     name: "Search View",
     slug: "search.view",
@@ -964,8 +897,6 @@ const SYSTEM_PERMISSIONS = [
     action: "view",
     description: "Search CRM records across the business.",
   },
-
-  // Imports
   {
     name: "Imports View",
     slug: "imports.view",
@@ -980,8 +911,6 @@ const SYSTEM_PERMISSIONS = [
     action: "create",
     description: "Import CRM records.",
   },
-
-  // Exports
   {
     name: "Exports Create",
     slug: "exports.create",
@@ -989,8 +918,6 @@ const SYSTEM_PERMISSIONS = [
     action: "create",
     description: "Export CRM records.",
   },
-
-  // Duplicates
   {
     name: "Duplicates View",
     slug: "duplicates.view",
@@ -1005,8 +932,6 @@ const SYSTEM_PERMISSIONS = [
     action: "manage",
     description: "Scan, merge, or ignore duplicate candidates.",
   },
-
-  // Reports
   {
     name: "Reports View",
     slug: "reports.view",
@@ -1035,8 +960,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete saved reports.",
   },
-
-  // Meetings
   {
     name: "Meetings View",
     slug: "meetings.view",
@@ -1059,8 +982,6 @@ const SYSTEM_PERMISSIONS = [
     description: "Update meetings.",
   },
 
-
-
   {
     name: "Meetings Delete",
     slug: "meetings.delete",
@@ -1068,8 +989,6 @@ const SYSTEM_PERMISSIONS = [
     action: "delete",
     description: "Delete meetings.",
   },
-
-  // Calendar
   {
     name: "Calendar View",
     slug: "calendar.view",
@@ -1126,19 +1045,6 @@ const SYSTEM_PERMISSIONS = [
     action: "availability.manage",
     description: "Manage calendar availability and working hours.",
   },
-
-  // Email
-
-
-
-  // WhatsApp
-
-
-
-  // SMS
-
-
-  // Sales Report
   {
     name: "Sales Report View",
     slug: "sales-report.view",
@@ -1146,8 +1052,6 @@ const SYSTEM_PERMISSIONS = [
     action: "view",
     description: "View sales reports.",
   },
-
-  // Leads Report
   {
     name: "Leads Report View",
     slug: "leads-report.view",
@@ -1155,8 +1059,6 @@ const SYSTEM_PERMISSIONS = [
     action: "view",
     description: "View leads reports.",
   },
-
-  // Deals Report
   {
     name: "Deals Report View",
     slug: "deals-report.view",
@@ -1164,8 +1066,6 @@ const SYSTEM_PERMISSIONS = [
     action: "view",
     description: "View deals reports.",
   },
-
-  // Activities Report
   {
     name: "Activities Report View",
     slug: "activities-report.view",
@@ -1173,8 +1073,6 @@ const SYSTEM_PERMISSIONS = [
     action: "view",
     description: "View activities reports.",
   },
-
-  // Communications
   {
     name: "Communications View",
     slug: "communications.view",
@@ -1191,23 +1089,11 @@ const SYSTEM_PERMISSIONS = [
   },
 ];
 
-/*
- * ============================================================
- * VALIDATION
- * ============================================================
- */
-
 const validateObjectId = (id, fieldName = "ID") => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new ApiError(400, `Invalid ${fieldName}.`);
   }
 };
-
-/*
- * ============================================================
- * NORMALIZE SLUG
- * ============================================================
- */
 
 const normalizeSlug = (value) => {
   return String(value || "")
@@ -1217,12 +1103,6 @@ const normalizeSlug = (value) => {
     .replace(/^-+|-+$/g, "")
     .replace(/-+/g, "-");
 };
-
-/*
- * ============================================================
- * GET PERMISSION BY ID
- * ============================================================
- */
 
 const getPermissionById = async (permissionId, businessId = null) => {
   validateObjectId(permissionId, "permission ID");
@@ -1249,12 +1129,6 @@ const getPermissionById = async (permissionId, businessId = null) => {
 
   return permission;
 };
-
-/*
- * ============================================================
- * GET PERMISSION BY SLUG
- * ============================================================
- */
 
 const getPermissionBySlug = async (slug, businessId = null) => {
   if (!slug || !String(slug).trim()) {
@@ -1283,12 +1157,6 @@ const getPermissionBySlug = async (slug, businessId = null) => {
 
   return permission;
 };
-
-/*
- * ============================================================
- * CREATE PERMISSION
- * ============================================================
- */
 
 const createPermission = async ({ name, description, module, action, type = "CUSTOM", businessId = null, createdBy }) => {
   validateObjectId(createdBy, "creator ID");
@@ -1321,7 +1189,9 @@ const createPermission = async ({ name, description, module, action, type = "CUS
     businessId: null,
     type: "SYSTEM",
     slug,
-  }).select("_id isActive").lean();
+  })
+    .select("_id isActive")
+    .lean();
 
   if (systemPermission) {
     throw new ApiError(409, "This permission slug is reserved by the CRM system.");
@@ -1351,20 +1221,6 @@ const createPermission = async ({ name, description, module, action, type = "CUS
 
   return permission;
 };
-
-/*
- * ============================================================
- * INITIALIZE / REPAIR SYSTEM PERMISSIONS
- * ============================================================
- *
- * This is idempotent.
- *
- * Missing permissions are created.
- * Existing permissions are repaired.
- * No duplicate permissions are created.
- *
- * ============================================================
- */
 
 const initializeSystemPermissions = async ({ createdBy }) => {
   validateObjectId(createdBy, "creator ID");
@@ -1418,8 +1274,6 @@ const initializeSystemPermissions = async ({ createdBy }) => {
         changed = true;
       }
 
-      /* SYSTEM permission definitions are globally active. Per-business
-       * activation/deactivation is stored in BusinessPermissionState. */
       if (permission.isActive !== true) {
         permission.isActive = true;
         changed = true;
@@ -1439,19 +1293,12 @@ const initializeSystemPermissions = async ({ createdBy }) => {
     permissions.push(permission);
   }
 
-  /* Deactivate legacy permission records that are no longer part of the canonical permission set. */
   const legacySlugs = [...LEGACY_SYSTEM_PERMISSION_SLUGS];
 
   await Permission.updateMany({ businessId: null, type: "SYSTEM", slug: { $in: legacySlugs }, isActive: true }, { $set: { isActive: false, updatedBy: createdBy } });
 
   return permissions;
 };
-
-/*
- * ============================================================
- * GET SYSTEM PERMISSIONS
- * ============================================================
- */
 
 const getSystemPermissions = async ({ includeInactive = false, createdBy = null, businessId = null } = {}) => {
   if (createdBy) {
@@ -1489,12 +1336,6 @@ const getSystemPermissions = async ({ includeInactive = false, createdBy = null,
   return includeInactive ? effective : effective.filter((permission) => permission.isActive);
 };
 
-/*
- * ============================================================
- * GET SYSTEM PERMISSION IDS
- * ============================================================
- */
-
 const getSystemPermissionIds = async ({ createdBy = null, includeInactive = false } = {}) => {
   const permissions = await getSystemPermissions({
     createdBy,
@@ -1503,12 +1344,6 @@ const getSystemPermissionIds = async ({ createdBy = null, includeInactive = fals
 
   return permissions.map((permission) => permission._id);
 };
-
-/*
- * ============================================================
- * GET BUSINESS PERMISSIONS
- * ============================================================
- */
 
 const getBusinessPermissions = async (businessId, { includeInactive = false } = {}) => {
   validateObjectId(businessId, "business ID");
@@ -1531,12 +1366,6 @@ const getBusinessPermissions = async (businessId, { includeInactive = false } = 
     .lean();
 };
 
-/*
- * ============================================================
- * GET ALL AVAILABLE PERMISSIONS
- * ============================================================
- */
-
 const getAllAvailablePermissions = async (businessId, { includeInactive = false, createdBy = null } = {}) => {
   validateObjectId(businessId, "business ID");
 
@@ -1557,12 +1386,6 @@ const getAllAvailablePermissions = async (businessId, { includeInactive = false,
   };
 };
 
-/*
- * ============================================================
- * UPDATE PERMISSION
- * ============================================================
- */
-
 const updatePermission = async (permissionId, updates, updatedBy, businessId = null) => {
   validateObjectId(permissionId, "permission ID");
   validateObjectId(updatedBy, "updater ID");
@@ -1580,21 +1403,6 @@ const updatePermission = async (permissionId, updates, updatedBy, businessId = n
   if (!updates || typeof updates !== "object" || Array.isArray(updates)) {
     throw new ApiError(400, "Permission updates must be an object.");
   }
-
-  // ============================================================
-  // SYSTEM PERMISSION
-  // ============================================================
-  // SYSTEM permission:
-  // - Edit ❌
-  // - Delete ❌
-  // - Activate ✅
-  // - Deactivate ✅
-  //
-  // Active/inactive is BUSINESS scoped through
-  // BusinessPermissionState.
-  //
-  // Permission.isActive remains the global SYSTEM definition.
-  // ============================================================
 
   if (permission.type === "SYSTEM") {
     const updateKeys = Object.keys(updates);
@@ -1617,22 +1425,12 @@ const updatePermission = async (permissionId, updates, updatedBy, businessId = n
       throw new ApiError(400, "System permission active status must be boolean.");
     }
 
-    // ------------------------------------------------------------
-    // SYSTEM permission is globally active.
-    // Old database records which were globally disabled are repaired.
-    // Business-specific inactive state is stored separately.
-    // ------------------------------------------------------------
-
     if (permission.isActive !== true) {
       permission.isActive = true;
       permission.updatedBy = updatedBy;
 
       await permission.save();
     }
-
-    // ------------------------------------------------------------
-    // BUSINESS-SPECIFIC SYSTEM PERMISSION STATE
-    // ------------------------------------------------------------
 
     const state = await BusinessPermissionState.findOneAndUpdate(
       {
@@ -1657,33 +1455,19 @@ const updatePermission = async (permissionId, updates, updatedBy, businessId = n
 
     return {
       ...permission.toObject(),
-
-      // Effective status for CURRENT business
       isActive: state.isActive !== false,
-
-      // SYSTEM permission itself remains global
       businessId: null,
 
       statusScope: "BUSINESS",
     };
   }
 
-  // ============================================================
-  // CUSTOM PERMISSION
-  // ============================================================
-
   if (permission.type !== "CUSTOM") {
     throw new ApiError(403, "This permission cannot be modified.");
   }
-
-  // CUSTOM permission must belong to current business
   if (!businessId || !permission.businessId || String(permission.businessId) !== String(businessId)) {
     throw new ApiError(403, "You do not have access to this permission.");
   }
-
-  // ------------------------------------------------------------
-  // NAME
-  // ------------------------------------------------------------
 
   if (Object.prototype.hasOwnProperty.call(updates, "name")) {
     const name = String(updates.name || "").trim();
@@ -1695,17 +1479,9 @@ const updatePermission = async (permissionId, updates, updatedBy, businessId = n
     permission.name = name;
   }
 
-  // ------------------------------------------------------------
-  // DESCRIPTION
-  // ------------------------------------------------------------
-
   if (Object.prototype.hasOwnProperty.call(updates, "description")) {
     permission.description = updates.description ? String(updates.description).trim() : null;
   }
-
-  // ------------------------------------------------------------
-  // MODULE
-  // ------------------------------------------------------------
 
   let nextModule = permission.module;
 
@@ -1719,10 +1495,6 @@ const updatePermission = async (permissionId, updates, updatedBy, businessId = n
     }
   }
 
-  // ------------------------------------------------------------
-  // ACTION
-  // ------------------------------------------------------------
-
   let nextAction = permission.action;
 
   if (Object.prototype.hasOwnProperty.call(updates, "action")) {
@@ -1735,10 +1507,6 @@ const updatePermission = async (permissionId, updates, updatedBy, businessId = n
     }
   }
 
-  // ------------------------------------------------------------
-  // MODULE + ACTION => SLUG
-  // ------------------------------------------------------------
-
   if (nextModule !== permission.module || nextAction !== permission.action) {
     const nextSlug = `${nextModule}.${nextAction}`;
 
@@ -1746,7 +1514,9 @@ const updatePermission = async (permissionId, updates, updatedBy, businessId = n
       businessId: null,
       type: "SYSTEM",
       slug: nextSlug,
-    }).select("_id").lean();
+    })
+      .select("_id")
+      .lean();
 
     if (reservedSystemPermission) {
       throw new ApiError(409, "This permission slug is reserved by the CRM system.");
@@ -1769,10 +1539,6 @@ const updatePermission = async (permissionId, updates, updatedBy, businessId = n
     permission.slug = nextSlug;
   }
 
-  // ------------------------------------------------------------
-  // ACTIVE / INACTIVE
-  // ------------------------------------------------------------
-
   if (Object.prototype.hasOwnProperty.call(updates, "isActive")) {
     if (typeof updates.isActive !== "boolean") {
       throw new ApiError(400, "Permission active status must be boolean.");
@@ -1784,10 +1550,6 @@ const updatePermission = async (permissionId, updates, updatedBy, businessId = n
   permission.updatedBy = updatedBy;
 
   await permission.save();
-
-  // ------------------------------------------------------------
-  // Remove deactivated CUSTOM permission from roles
-  // ------------------------------------------------------------
 
   if (permission.isActive === false) {
     const Role = require("../roles/role.model");
@@ -1807,11 +1569,6 @@ const updatePermission = async (permissionId, updates, updatedBy, businessId = n
 
   return permission;
 };
-/*
- * ============================================================
- * DELETE / DEACTIVATE PERMISSION
- * ============================================================
- */
 
 const deletePermission = async (permissionId, deletedBy, businessId = null) => {
   validateObjectId(permissionId, "permission ID");
@@ -1843,10 +1600,6 @@ const deletePermission = async (permissionId, deletedBy, businessId = null) => {
     businessId,
   });
 
-  /*
-   * Remove the deleted permission from any custom roles in the
-   * same business so no stale ObjectId remains in role.permissions.
-   */
   const Role = require("../roles/role.model");
 
   await Role.updateMany(
@@ -1864,21 +1617,6 @@ const deletePermission = async (permissionId, deletedBy, businessId = null) => {
 
   return permission;
 };
-
-/*
- * ============================================================
- * VALIDATE PERMISSION IDS
- * ============================================================
- *
- * A role may contain:
- *
- * 1. SYSTEM permissions
- * 2. CUSTOM permissions belonging to same business
- *
- * It may NOT contain another business's custom permission.
- *
- * ============================================================
- */
 
 const validatePermissionIds = async (permissionIds = [], businessId = null) => {
   if (!Array.isArray(permissionIds)) {
@@ -1899,10 +1637,6 @@ const validatePermissionIds = async (permissionIds = [], businessId = null) => {
     validateObjectId(businessId, "business ID");
   }
 
-  // ------------------------------------------------------------
-  // Validate permission definitions
-  // ------------------------------------------------------------
-
   const filter = {
     _id: {
       $in: uniquePermissionIds,
@@ -1911,13 +1645,10 @@ const validatePermissionIds = async (permissionIds = [], businessId = null) => {
     isActive: true,
 
     $or: [
-      // SYSTEM permission
       {
         type: "SYSTEM",
         businessId: null,
       },
-
-      // CUSTOM permission
       ...(businessId
         ? [
             {
@@ -1934,10 +1665,6 @@ const validatePermissionIds = async (permissionIds = [], businessId = null) => {
   if (permissions.length !== uniquePermissionIds.length) {
     throw new ApiError(400, "One or more permission IDs are invalid, inactive, or not available for this business.");
   }
-
-  // ------------------------------------------------------------
-  // SYSTEM permission business-level status
-  // ------------------------------------------------------------
 
   if (businessId) {
     const systemPermissionIds = permissions.filter((permission) => permission.type === "SYSTEM").map((permission) => permission._id);
@@ -1967,14 +1694,7 @@ const validatePermissionIds = async (permissionIds = [], businessId = null) => {
 
   return uniquePermissionIds;
 };
-/*
- * ============================================================
- * GET EFFECTIVE ACTIVE PERMISSIONS FOR A BUSINESS
- * ============================================================
- * SYSTEM permissions are global definitions, but their active
- * state is business-scoped through BusinessPermissionState.
- * CUSTOM permissions keep their own business-scoped isActive.
- */
+
 const getActivePermissionIdsForBusiness = async (permissionIds = [], businessId) => {
   if (!Array.isArray(permissionIds)) {
     throw new ApiError(400, "Permissions must be an array.");
@@ -2011,12 +1731,6 @@ const getActivePermissionIdsForBusiness = async (permissionIds = [], businessId)
 
   return permissions.filter((permission) => permission.type !== "SYSTEM" || !inactiveSystemIds.has(String(permission._id))).map((permission) => String(permission._id));
 };
-
-/*
- * ============================================================
- * FIND PERMISSION IDS BY SLUG
- * ============================================================
- */
 
 const getPermissionIdsBySlugs = async (slugs = [], { createMissing = false, createdBy = null } = {}) => {
   if (!Array.isArray(slugs)) {
@@ -2063,12 +1777,6 @@ const getPermissionIdsBySlugs = async (slugs = [], { createMissing = false, crea
   return normalizedSlugs.map((slug) => permissionMap.get(slug));
 };
 
-/*
- * ============================================================
- * REPAIR SYSTEM PERMISSIONS
- * ============================================================
- */
-
 const repairSystemPermissions = async ({ createdBy }) => {
   const permissions = await initializeSystemPermissions({
     createdBy,
@@ -2079,12 +1787,6 @@ const repairSystemPermissions = async ({ createdBy }) => {
     permissions,
   };
 };
-
-/*
- * ============================================================
- * EXPORTS
- * ============================================================
- */
 
 module.exports = {
   SYSTEM_PERMISSIONS,

@@ -3,12 +3,6 @@ const ApiResponse = require("../../utils/ApiResponse");
 
 const adminService = require("./admin.service");
 
-/*
- * ============================================================
- * ADMIN DASHBOARD / USERS LIST
- * ============================================================
- */
-
 const getDashboard = asyncHandler(async (req, res) => {
   const { page = 1, limit = 20 } = req.query;
 
@@ -31,12 +25,6 @@ const getDashboard = asyncHandler(async (req, res) => {
   );
 });
 
-/*
- * ============================================================
- * GET USER DETAIL
- * ============================================================
- */
-
 const getUser = asyncHandler(async (req, res) => {
   const user = await adminService.getUserById(req.params.id);
 
@@ -48,12 +36,6 @@ const getUser = asyncHandler(async (req, res) => {
     "User details fetched successfully."
   );
 });
-
-/*
- * ============================================================
- * UPDATE USER
- * ============================================================
- */
 
 const updateUser = asyncHandler(async (req, res) => {
   const user = await adminService.updateUser(req.params.id, {
@@ -71,12 +53,6 @@ const updateUser = asyncHandler(async (req, res) => {
   );
 });
 
-/*
- * ============================================================
- * BLOCK / UNBLOCK / STATUS
- * ============================================================
- */
-
 const updateUserStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
 
@@ -90,12 +66,6 @@ const updateUserStatus = asyncHandler(async (req, res) => {
     `User status changed to ${status}.`
   );
 });
-
-/*
- * ============================================================
- * DELETE USER
- * ============================================================
- */
 
 const deleteUser = asyncHandler(async (req, res) => {
   const result = await adminService.deleteUser(req.params.id, req.user.userId);

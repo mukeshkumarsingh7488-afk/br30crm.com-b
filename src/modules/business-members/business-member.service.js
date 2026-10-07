@@ -123,16 +123,7 @@ const getAssignmentMembersByBusiness = async (businessId, { page = 1, limit = 10
   const filter = { businessId, status: "ACTIVE" };
   const skip = (safePage - 1) * safeLimit;
 
-  const [members, total] = await Promise.all([
-    BusinessMember.find(filter)
-      .populate("userId", "name firstName lastName email phone profileImage status")
-      .populate("roleId", "name slug")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(safeLimit)
-      .lean(),
-    BusinessMember.countDocuments(filter),
-  ]);
+  const [members, total] = await Promise.all([BusinessMember.find(filter).populate("userId", "name firstName lastName email phone profileImage status").populate("roleId", "name slug").sort({ createdAt: -1 }).skip(skip).limit(safeLimit).lean(), BusinessMember.countDocuments(filter)]);
 
   return {
     members,

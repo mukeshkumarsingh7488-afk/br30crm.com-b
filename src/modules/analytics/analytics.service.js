@@ -17,7 +17,7 @@ const validateBusiness = async (businessId) => {
     throw new ApiError(400, "Invalid business ID");
   }
 
-  const business = await Business.findById(businessId).select("_id status");
+  const business = await Business.findById(businessId).select("_id status timezone");
 
   if (!business) {
     throw new ApiError(404, "Business not found");
@@ -118,14 +118,11 @@ const getOverview = async ({ businessId, userId, startDate, endDate }) => {
   };
 };
 
-const getMetric = async ({ businessId, userId, metric, startDate, endDate }) => {
-  await validateBusiness(businessId);
+const getMetric = async ({ businessId, userId, metric, startDate, endDate, period = "MONTHLY" }) => {
+  const business = await validateBusiness(businessId);
   await validateMember(businessId, userId);
 
-  const range = normalizeDateRange({
-    startDate,
-    endDate,
-  });
+  const range = normalizeDateRange({ startDate, endDate });
 
   const models = {
     leads: Lead,
@@ -143,11 +140,40 @@ const getMetric = async ({ businessId, userId, metric, startDate, endDate }) => 
   }
 
   const value = await getCollectionCount(Model, businessId, range.startDate, range.endDate);
+  const unitMap = { DAILY: "day", WEEKLY: "week", MONTHLY: "month", YEARLY: "year", CUSTOM: "day" };
+  const unit = unitMap[period] || "month";
+  const timezone = business.timezone || "Asia/Kolkata";
+
+  const series = await Model.aggregate([
+    {
+      $match: {
+        businessId: new mongoose.Types.ObjectId(businessId),
+        createdAt: { $gte: range.startDate, $lte: range.endDate },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          $dateTrunc: {
+            date: "$createdAt",
+            unit,
+            timezone,
+            ...(unit === "week" ? { startOfWeek: "monday" } : {}),
+          },
+        },
+        value: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
 
   return {
     metric,
     value,
     period: range,
+    grouping: period,
+    timezone,
+    series: series.map((item) => ({ periodStart: item._id, value: item.value })),
   };
 };
 

@@ -8,45 +8,15 @@ const { initAutomationEngine, runAutomationScheduler } = require("./automation")
 const startServer = async () => {
   try {
     await connectDB();
-
-    /*
-     * ============================================================
-     * ACCESS CONTROL BOOTSTRAP / REPAIR
-     * ============================================================
-     *
-     * Ensures:
-     * - System permissions exist
-     * - System roles exist
-     * - Business Owner has all permissions
-     * - Existing owner memberships have correct role
-     *
-     * Safe to run on every startup because the service
-     * only creates/repairs missing data.
-     * ============================================================
-     */
-
     await roleService.repairAccessControl(env.masterAdminUserId);
-
     initAutomationEngine();
     startWorker();
-    const automationTimer = setInterval(() => { runAutomationScheduler().catch((error) => console.error("Automation scheduler error:", error)); }, 60000);
+    const automationTimer = setInterval(() => {
+      runAutomationScheduler().catch(() => {});
+    }, 60000);
     if (automationTimer.unref) automationTimer.unref();
-
-    const server = app.listen(env.port, () => {
-      console.log("");
-      console.log("========================================");
-      console.log("        BR30 CRM API");
-      console.log("========================================");
-      console.log(`Environment : ${env.nodeEnv}`);
-      console.log(`Port        : ${env.port}`);
-      console.log(`URL         : ${env.appUrl}`);
-      console.log("========================================");
-      console.log("");
-    });
-
-    const shutdown = async (signal) => {
-      console.log(`\n${signal} received. Shutting down...`);
-
+    const server = app.listen(env.port);
+    const shutdown = async () => {
       server.close(async () => {
         stopWorker();
         clearInterval(automationTimer);
@@ -54,11 +24,9 @@ const startServer = async () => {
         process.exit(0);
       });
     };
-
-    process.on("SIGINT", () => shutdown("SIGINT"));
-    process.on("SIGTERM", () => shutdown("SIGTERM"));
-  } catch (error) {
-    console.error("Server startup failed:", error);
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
+  } catch {
     process.exit(1);
   }
 };

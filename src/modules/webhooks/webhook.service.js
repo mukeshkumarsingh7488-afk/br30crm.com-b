@@ -327,16 +327,24 @@ const testWebhook = async (webhookId, businessId, actorId) => {
   return { deliveryId: delivery._id, queued: true };
 };
 const retryDelivery = async (deliveryId, businessId) => {
-  await getBusiness(businessId); validateObjectId(deliveryId, "delivery ID");
-  const delivery = await WebhookDelivery.findOne({ _id: deliveryId, businessId }); if (!delivery) throw new ApiError(404, "Webhook delivery not found.");
-  const webhook = await Webhook.findOne({ _id: delivery.webhookId, businessId }); if (!webhook) throw new ApiError(404, "Webhook not found.");
-  delivery.status = "PENDING"; delivery.error = null; await delivery.save();
+  await getBusiness(businessId);
+  validateObjectId(deliveryId, "delivery ID");
+  const delivery = await WebhookDelivery.findOne({ _id: deliveryId, businessId });
+  if (!delivery) throw new ApiError(404, "Webhook delivery not found.");
+  const webhook = await Webhook.findOne({ _id: delivery.webhookId, businessId });
+  if (!webhook) throw new ApiError(404, "Webhook not found.");
+  delivery.status = "PENDING";
+  delivery.error = null;
+  await delivery.save();
   await enqueue("WEBHOOK_DELIVERY", { deliveryId: delivery._id.toString() }, { maxAttempts: webhook.retryEnabled ? webhook.maxRetries + 1 : 1 });
   return { deliveryId: delivery._id, queued: true };
 };
 const getDeliveryById = async (deliveryId, businessId) => {
-  await getBusiness(businessId); validateObjectId(deliveryId, "delivery ID");
-  const delivery = await WebhookDelivery.findOne({ _id: deliveryId, businessId }).lean(); if (!delivery) throw new ApiError(404, "Webhook delivery not found."); return delivery;
+  await getBusiness(businessId);
+  validateObjectId(deliveryId, "delivery ID");
+  const delivery = await WebhookDelivery.findOne({ _id: deliveryId, businessId }).lean();
+  if (!delivery) throw new ApiError(404, "Webhook delivery not found.");
+  return delivery;
 };
 const getDeliveries = async ({ businessId, webhookId, status, page = 1, limit = 20 }) => {
   await getBusiness(businessId);

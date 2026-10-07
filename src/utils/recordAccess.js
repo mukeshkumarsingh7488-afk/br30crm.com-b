@@ -1,7 +1,11 @@
 const Team = require("../modules/teams/team.model");
 const ApiError = require("./ApiError");
 
-const normalize = (value) => String(value || "").trim().toLowerCase().replace(/[_\s]+/g, "-");
+const normalize = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-");
 
 const isManagerRole = (roleSlug, roleName) => {
   const slug = normalize(roleSlug);

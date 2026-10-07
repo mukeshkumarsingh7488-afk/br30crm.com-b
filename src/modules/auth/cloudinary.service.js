@@ -57,12 +57,6 @@ const deleteProfileImage = async (publicId) => {
 
     return result;
   } catch (error) {
-    console.error("========================================");
-    console.error("CLOUDINARY PROFILE IMAGE DELETE FAILED");
-    console.error("Public ID:", publicId);
-    console.error("Message:", error.message);
-    console.error("========================================");
-
     throw error;
   }
 };

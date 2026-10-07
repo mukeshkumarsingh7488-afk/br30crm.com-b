@@ -138,7 +138,6 @@ const validateTaskRelationships = async ({ businessId, assignedTo, relatedTo, ta
   return getBusinessTags(tags, businessId);
 };
 
-
 const assertTaskAccess = (task, access = {}) => {
   if (access?.fullAccess || access?.isBusinessOwner) return;
   validateObjectId(access.userId, "user ID");

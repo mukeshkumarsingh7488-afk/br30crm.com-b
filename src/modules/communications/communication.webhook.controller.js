@@ -63,8 +63,6 @@ exports.whatsappVerify = async (req, res) => {
 
     return res.sendStatus(403);
   } catch (error) {
-    console.error("WhatsApp verify error:", error.message);
-
     return res.sendStatus(404);
   }
 };
@@ -149,8 +147,6 @@ exports.whatsapp = async (req, res) => {
 
     return res.sendStatus(200);
   } catch (error) {
-    console.error("WhatsApp webhook error:", error.message);
-
     return res.sendStatus(500);
   }
 };
@@ -223,8 +219,6 @@ exports.sms = async (req, res) => {
 
     return res.status(200).type("text/plain").send("OK");
   } catch (error) {
-    console.error("SMS webhook error:", error.message);
-
     return res.sendStatus(500);
   }
 };
@@ -308,8 +302,6 @@ exports.emailGeneric = async (req, res) => {
 
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Email webhook error:", error.message);
-
     return res.sendStatus(500);
   }
 };

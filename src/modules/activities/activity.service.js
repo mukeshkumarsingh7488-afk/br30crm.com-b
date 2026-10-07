@@ -12,25 +12,16 @@ const Deal = require("../deals/deal.model");
 const Tag = require("../tags/tag.model");
 const BusinessMember = require("../business-members/business-member.model");
 
-/*
- * Validate MongoDB ObjectId
- */
 const validateObjectId = (id, fieldName) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new ApiError(400, `Invalid ${fieldName}.`);
   }
 };
 
-/*
- * Escape user input before using it as a MongoDB regex.
- */
 const escapeRegex = (value) => {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
 
-/*
- * Pagination helper
- */
 const buildPagination = (page = 1, limit = 20) => {
   const parsedPage = Math.max(Number(page) || 1, 1);
   const parsedLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
@@ -42,9 +33,6 @@ const buildPagination = (page = 1, limit = 20) => {
   };
 };
 
-/*
- * Check contact belongs to business and is active.
- */
 const getActiveContact = async (contactId, businessId) => {
   if (!contactId) return null;
 
@@ -63,9 +51,6 @@ const getActiveContact = async (contactId, businessId) => {
   return contact;
 };
 
-/*
- * Check company belongs to business and is active.
- */
 const getActiveCompany = async (companyId, businessId) => {
   if (!companyId) return null;
 
@@ -84,9 +69,6 @@ const getActiveCompany = async (companyId, businessId) => {
   return company;
 };
 
-/*
- * Check lead belongs to business.
- */
 const getLead = async (leadId, businessId) => {
   if (!leadId) return null;
 
@@ -104,9 +86,6 @@ const getLead = async (leadId, businessId) => {
   return lead;
 };
 
-/*
- * Check deal belongs to business and is active.
- */
 const getDeal = async (dealId, businessId) => {
   if (!dealId) return null;
 
@@ -125,9 +104,6 @@ const getDeal = async (dealId, businessId) => {
   return deal;
 };
 
-/*
- * Check assigned user is an active member of the business.
- */
 const getActiveAssignedUser = async (assignedTo, businessId) => {
   if (!assignedTo) return null;
 
@@ -146,9 +122,6 @@ const getActiveAssignedUser = async (assignedTo, businessId) => {
   return member;
 };
 
-/*
- * Validate tags belong to the same business.
- */
 const getBusinessTags = async (tags, businessId) => {
   if (!tags || tags.length === 0) {
     return [];
@@ -183,9 +156,6 @@ const getBusinessTags = async (tags, businessId) => {
   return tagDocuments.map((tag) => tag._id);
 };
 
-/*
- * Validate all related entities.
- */
 const validateRelationships = async ({ businessId, assignedTo, contactId, companyId, leadId, dealId, tags }) => {
   const [assignedUser, contact, company, lead, deal, validatedTags] = await Promise.all([
     getActiveAssignedUser(assignedTo, businessId),
@@ -206,10 +176,7 @@ const validateRelationships = async ({ businessId, assignedTo, contactId, compan
   };
 };
 
-/*
- * Create activity
- */
-const createActivity = async ({ businessId, type, subject, description, status, priority, dueAt, assignedTo, createdBy, contactId, companyId, leadId, dealId, location, reminderAt, tags, metadata }) => {
+const createActivity = async ({ businessId, type, subject, description, status, priority, dueAt, assignedTo, createdBy, contactId, companyId, leadId, dealId, location, outcome, reminderAt, tags, metadata }) => {
   validateObjectId(businessId, "business ID");
 
   validateObjectId(createdBy, "creator ID");
@@ -257,6 +224,8 @@ const createActivity = async ({ businessId, type, subject, description, status, 
 
     location: location || null,
 
+    outcome: outcome || null,
+
     reminderAt: reminderAt || null,
 
     tags: validated.tags,
@@ -267,9 +236,6 @@ const createActivity = async ({ businessId, type, subject, description, status, 
   return getActivityById(activity._id, businessId);
 };
 
-/*
- * Get activity by ID
- */
 const getActivityById = async (activityId, businessId, access = null) => {
   validateObjectId(activityId, "activity ID");
 
@@ -298,9 +264,6 @@ const getActivityById = async (activityId, businessId, access = null) => {
   return activity;
 };
 
-/*
- * Get all activities of a business
- */
 const getActivitiesByBusiness = async (businessId, { page = 1, limit = 20, search, status, type, assignedTo, contactId, companyId, leadId, dealId, access } = {}) => {
   validateObjectId(businessId, "business ID");
 
@@ -409,9 +372,6 @@ const getActivitiesByBusiness = async (businessId, { page = 1, limit = 20, searc
   };
 };
 
-/*
- * Update activity
- */
 const updateActivity = async (activityId, businessId, updates, updatedBy, access = null) => {
   validateObjectId(activityId, "activity ID");
 
@@ -445,14 +405,6 @@ const updateActivity = async (activityId, businessId, updates, updatedBy, access
 
   let validatedTags = activity.tags || [];
 
-  /*
-   * Validate relationship fields only when
-   * one of them is being updated.
-   *
-   * IMPORTANT:
-   * null is intentionally preserved so
-   * frontend can unassign/unlink relations.
-   */
   if (hasAssignedTo || hasContactId || hasCompanyId || hasLeadId || hasDealId || hasTags) {
     const relationshipResult = await validateRelationships({
       businessId,
@@ -481,16 +433,10 @@ const updateActivity = async (activityId, businessId, updates, updatedBy, access
     }
   }
 
-  /*
-   * Save validated tags separately.
-   */
   if (hasTags) {
     activity.tags = validatedTags;
   }
 
-  /*
-   * Preserve completion timestamp logic.
-   */
   if (updates.status === "COMPLETED") {
     if (!activity.completedAt) {
       activity.completedAt = new Date();
@@ -501,9 +447,6 @@ const updateActivity = async (activityId, businessId, updates, updatedBy, access
     activity.completedAt = null;
   }
 
-  /*
-   * Audit user
-   */
   activity.updatedBy = updatedBy;
 
   await activity.save();
@@ -511,9 +454,6 @@ const updateActivity = async (activityId, businessId, updates, updatedBy, access
   return getActivityById(activityId, businessId);
 };
 
-/*
- * Complete activity
- */
 const completeActivity = async (activityId, businessId, outcome, completedBy, access = null) => {
   validateObjectId(activityId, "activity ID");
 
@@ -548,9 +488,6 @@ const completeActivity = async (activityId, businessId, outcome, completedBy, ac
   return getActivityById(activityId, businessId);
 };
 
-/*
- * Soft delete activity
- */
 const deleteActivity = async (activityId, businessId, deletedBy, access = null) => {
   validateObjectId(activityId, "activity ID");
 

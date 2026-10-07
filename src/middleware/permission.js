@@ -2,34 +2,9 @@ const ApiError = require("../utils/ApiError");
 const Permission = require("../modules/permissions/permission.model");
 const BusinessPermissionState = require("../modules/permissions/business-permission-state.model");
 
-/*
- * ============================================================
- * MASTER ADMIN CHECK
- * ============================================================
- *
- * Master Admin is authorized by requireMasterAdmin middleware.
- *
- * req.isMasterAdmin === true
- *
- * Master Admin does NOT need:
- * - Business membership
- * - Business ID
- * - CRM role
- * - CRM permission
- *
- * Normal users continue through the existing permission system.
- * ============================================================
- */
-
 const isMasterAdminRequest = (req) => {
   return req?.isMasterAdmin === true;
 };
-
-/*
- * ============================================================
- * REQUIRE ONE PERMISSION
- * ============================================================
- */
 
 const requirePermission = (requiredPermission) => {
   return async (req, res, next) => {
@@ -42,29 +17,12 @@ const requirePermission = (requiredPermission) => {
         return next(new ApiError(401, "Authentication required."));
       }
 
-      /*
-       * ========================================================
-       * MASTER ADMIN BYPASS
-       * ========================================================
-       *
-       * Master Admin has full system access.
-       *
-       * No business membership or CRM permission is required.
-       * ========================================================
-       */
-
       if (isMasterAdminRequest(req)) {
         req.permission = requiredPermission;
         req.isMasterAdmin = true;
 
         return next();
       }
-
-      /*
-       * ========================================================
-       * NORMAL CRM USER
-       * ========================================================
-       */
 
       if (!req.businessMember || !req.role) {
         return next(new ApiError(403, "Business authorization is required."));
@@ -74,11 +32,6 @@ const requirePermission = (requiredPermission) => {
         return next(new ApiError(403, "Your business membership is inactive."));
       }
 
-      /*
-       * Business Owner bypass. The owner is determined from the
-       * Business.ownerId by requireBusinessMembership, not from
-       * a client-supplied role or permission list.
-       */
       if (req.isBusinessOwner === true) {
         req.permission = requiredPermission;
         req.isBusinessOwner = true;
@@ -97,17 +50,18 @@ const requirePermission = (requiredPermission) => {
         .lean();
 
       const systemIds = permissions.filter((permission) => permission.type === "SYSTEM").map((permission) => permission._id);
-      const inactiveSystemStates = systemIds.length && req.businessId
-        ? await BusinessPermissionState.find({
-            businessId: req.businessId,
-            permissionId: { $in: systemIds },
-            isActive: false,
-          }).select("permissionId").lean()
-        : [];
+      const inactiveSystemStates =
+        systemIds.length && req.businessId
+          ? await BusinessPermissionState.find({
+              businessId: req.businessId,
+              permissionId: { $in: systemIds },
+              isActive: false,
+            })
+              .select("permissionId")
+              .lean()
+          : [];
       const inactiveSystemIds = new Set(inactiveSystemStates.map((state) => String(state.permissionId)));
-      const effectivePermissions = permissions.filter(
-        (permission) => permission.type !== "SYSTEM" || !inactiveSystemIds.has(String(permission._id))
-      );
+      const effectivePermissions = permissions.filter((permission) => permission.type !== "SYSTEM" || !inactiveSystemIds.has(String(permission._id)));
 
       const hasPermission = effectivePermissions.some((permission) => permission.slug === requiredPermission);
 
@@ -124,12 +78,6 @@ const requirePermission = (requiredPermission) => {
   };
 };
 
-/*
- * ============================================================
- * REQUIRE ANY PERMISSION
- * ============================================================
- */
-
 const requireAnyPermission = (requiredPermissions = []) => {
   return async (req, res, next) => {
     try {
@@ -141,24 +89,12 @@ const requireAnyPermission = (requiredPermissions = []) => {
         return next(new ApiError(401, "Authentication required."));
       }
 
-      /*
-       * ========================================================
-       * MASTER ADMIN BYPASS
-       * ========================================================
-       */
-
       if (isMasterAdminRequest(req)) {
         req.permissions = [...requiredPermissions];
         req.isMasterAdmin = true;
 
         return next();
       }
-
-      /*
-       * ========================================================
-       * NORMAL CRM USER
-       * ========================================================
-       */
 
       if (!req.businessMember || !req.role) {
         return next(new ApiError(403, "Business authorization is required."));
@@ -168,11 +104,6 @@ const requireAnyPermission = (requiredPermissions = []) => {
         return next(new ApiError(403, "Your business membership is inactive."));
       }
 
-      /*
-       * Business Owner bypass. The owner is determined from the
-       * Business.ownerId by requireBusinessMembership, not from
-       * a client-supplied role or permission list.
-       */
       if (req.isBusinessOwner === true) {
         req.permissions = [...requiredPermissions];
         req.isBusinessOwner = true;
@@ -191,17 +122,18 @@ const requireAnyPermission = (requiredPermissions = []) => {
         .lean();
 
       const systemIds = permissions.filter((permission) => permission.type === "SYSTEM").map((permission) => permission._id);
-      const inactiveSystemStates = systemIds.length && req.businessId
-        ? await BusinessPermissionState.find({
-            businessId: req.businessId,
-            permissionId: { $in: systemIds },
-            isActive: false,
-          }).select("permissionId").lean()
-        : [];
+      const inactiveSystemStates =
+        systemIds.length && req.businessId
+          ? await BusinessPermissionState.find({
+              businessId: req.businessId,
+              permissionId: { $in: systemIds },
+              isActive: false,
+            })
+              .select("permissionId")
+              .lean()
+          : [];
       const inactiveSystemIds = new Set(inactiveSystemStates.map((state) => String(state.permissionId)));
-      const effectivePermissions = permissions.filter(
-        (permission) => permission.type !== "SYSTEM" || !inactiveSystemIds.has(String(permission._id))
-      );
+      const effectivePermissions = permissions.filter((permission) => permission.type !== "SYSTEM" || !inactiveSystemIds.has(String(permission._id)));
 
       const userPermissionSlugs = new Set(effectivePermissions.map((permission) => permission.slug));
 
@@ -220,12 +152,6 @@ const requireAnyPermission = (requiredPermissions = []) => {
   };
 };
 
-/*
- * ============================================================
- * REQUIRE ALL PERMISSIONS
- * ============================================================
- */
-
 const requireAllPermissions = (requiredPermissions = []) => {
   return async (req, res, next) => {
     try {
@@ -237,24 +163,12 @@ const requireAllPermissions = (requiredPermissions = []) => {
         return next(new ApiError(401, "Authentication required."));
       }
 
-      /*
-       * ========================================================
-       * MASTER ADMIN BYPASS
-       * ========================================================
-       */
-
       if (isMasterAdminRequest(req)) {
         req.permissions = [...requiredPermissions];
         req.isMasterAdmin = true;
 
         return next();
       }
-
-      /*
-       * ========================================================
-       * NORMAL CRM USER
-       * ========================================================
-       */
 
       if (!req.businessMember || !req.role) {
         return next(new ApiError(403, "Business authorization is required."));
@@ -264,11 +178,6 @@ const requireAllPermissions = (requiredPermissions = []) => {
         return next(new ApiError(403, "Your business membership is inactive."));
       }
 
-      /*
-       * Business Owner bypass. The owner is determined from the
-       * Business.ownerId by requireBusinessMembership, not from
-       * a client-supplied role or permission list.
-       */
       if (req.isBusinessOwner === true) {
         req.permissions = [...requiredPermissions];
         req.isBusinessOwner = true;
@@ -287,17 +196,18 @@ const requireAllPermissions = (requiredPermissions = []) => {
         .lean();
 
       const systemIds = permissions.filter((permission) => permission.type === "SYSTEM").map((permission) => permission._id);
-      const inactiveSystemStates = systemIds.length && req.businessId
-        ? await BusinessPermissionState.find({
-            businessId: req.businessId,
-            permissionId: { $in: systemIds },
-            isActive: false,
-          }).select("permissionId").lean()
-        : [];
+      const inactiveSystemStates =
+        systemIds.length && req.businessId
+          ? await BusinessPermissionState.find({
+              businessId: req.businessId,
+              permissionId: { $in: systemIds },
+              isActive: false,
+            })
+              .select("permissionId")
+              .lean()
+          : [];
       const inactiveSystemIds = new Set(inactiveSystemStates.map((state) => String(state.permissionId)));
-      const effectivePermissions = permissions.filter(
-        (permission) => permission.type !== "SYSTEM" || !inactiveSystemIds.has(String(permission._id))
-      );
+      const effectivePermissions = permissions.filter((permission) => permission.type !== "SYSTEM" || !inactiveSystemIds.has(String(permission._id)));
 
       const userPermissionSlugs = new Set(effectivePermissions.map((permission) => permission.slug));
 
@@ -316,19 +226,19 @@ const requireAllPermissions = (requiredPermissions = []) => {
   };
 };
 
-/*
- * Management-role guard.
- * Business Owner, the system/custom Manager role, and users who are
- * explicitly a Team.managerId may perform tenant-management actions.
- * Permission slugs remain a second security boundary.
- */
 const requireManagementRole = async (req, res, next) => {
   try {
     if (!req.user?.userId) return next(new ApiError(401, "Authentication required."));
     if (isMasterAdminRequest(req) || req.isBusinessOwner === true) return next();
 
-    const roleSlug = String(req.role?.slug || "").trim().toLowerCase().replace(/[_\s]+/g, "-");
-    const roleName = String(req.role?.name || "").trim().toLowerCase().replace(/[_\s]+/g, "-");
+    const roleSlug = String(req.role?.slug || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[_\s]+/g, "-");
+    const roleName = String(req.role?.name || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[_\s]+/g, "-");
     const isManagerRole = roleSlug === "manager" || roleSlug === "team-manager" || roleSlug.endsWith("-manager") || roleName === "manager" || roleName === "team-manager" || roleName.endsWith("-manager");
 
     if (isManagerRole) return next();

@@ -22,11 +22,6 @@ const request = async (method, endpoint, payload = undefined, query = undefined)
   }
 
   const controller = new AbortController();
-
-  // Brevo API request timeout only.
-  // IMPORTANT:
-  // This timeout is NOT a delivery timeout.
-  // Once Brevo accepts the message, the request finishes.
   const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {
@@ -64,12 +59,6 @@ const request = async (method, endpoint, payload = undefined, query = undefined)
     clearTimeout(timeout);
   }
 };
-
-/*
- * ============================================================
- * BREVO CONVERSATIONS
- * ============================================================
- */
 
 const sendConversationMessage = async ({ visitorId, text, agentId, agentEmail, agentName, receivedFrom }) => {
   if (!visitorId) {
@@ -143,28 +132,11 @@ const getConversationMessage = async (id) => request("GET", `/conversations/mess
 
 const getPushedMessage = async (id) => request("GET", `/conversations/pushedMessages/${encodeURIComponent(id)}`);
 
-/*
- * ============================================================
- * EMAIL
- * ============================================================
- *
- * IMPORTANT:
- *
- * This function ONLY waits for Brevo API acceptance.
- *
- * It does NOT wait for DELIVERED.
- *
- * Delivery status will be handled separately by the
- * communication webhook.
- */
-
 const sendEmail = async (payload) => {
   const data = await request("POST", "/smtp/email", payload);
 
   return {
     provider: "brevo-email",
-
-    // Brevo normally returns messageId here.
     providerMessageId: data?.messageId ? String(data.messageId) : null,
 
     raw: data,
@@ -172,20 +144,6 @@ const sendEmail = async (payload) => {
     accepted: true,
   };
 };
-
-/*
- * ============================================================
- * SMS
- * ============================================================
- *
- * API acceptance != delivery.
- *
- * We return the Brevo message ID immediately.
- * The webhook will later change:
- *
- * SENT -> DELIVERED
- * SENT -> FAILED
- */
 
 const sendSms = async (payload) => {
   const data = await request("POST", "/transactionalSMS/send", payload);
@@ -201,17 +159,6 @@ const sendSms = async (payload) => {
   };
 };
 
-/*
- * ============================================================
- * WHATSAPP
- * ============================================================
- *
- * API acceptance != delivery.
- *
- * We return immediately after Brevo accepts the message.
- * Delivery is updated through webhook.
- */
-
 const sendWhatsApp = async (payload) => {
   const data = await request("POST", "/whatsapp/sendMessage", payload);
 
@@ -226,27 +173,9 @@ const sendWhatsApp = async (payload) => {
   };
 };
 
-/*
- * ============================================================
- * WHATSAPP STATISTICS
- * ============================================================
- */
-
 const getWhatsAppStatistics = async (query) => request("GET", "/whatsapp/statistics/events", undefined, query);
 
-/*
- * ============================================================
- * WEBHOOKS
- * ============================================================
- */
-
 const getWebhooks = async () => request("GET", "/webhooks");
-
-/*
- * ============================================================
- * EXPORTS
- * ============================================================
- */
 
 module.exports = {
   request,

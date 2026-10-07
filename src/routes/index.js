@@ -47,6 +47,7 @@ const calendarAvailabilityRoutes = require("../modules/calendar/calendar-availab
 const communicationRoutes = require("../modules/communications/communication.routes");
 const socialLeadRoutes = require("../modules/social-leads/social-lead.routes");
 const leadSourceRoutes = require("../modules/lead-sources/lead-source.routes");
+const leadAttributionRoutes = require("../modules/lead-attribution/lead-attribution.routes");
 const subscriptionRoutes = require("../modules/subscriptions/subscription.routes");
 
 const router = express.Router();
@@ -114,6 +115,7 @@ router.use("/calendar-availability", calendarAvailabilityRoutes);
 router.use("/communications", communicationRoutes);
 router.use("/social-leads", socialLeadRoutes);
 router.use("/lead-sources", leadSourceRoutes);
+router.use("/lead-attribution", leadAttributionRoutes);
 router.use("/subscriptions", subscriptionRoutes);
 
 module.exports = router;

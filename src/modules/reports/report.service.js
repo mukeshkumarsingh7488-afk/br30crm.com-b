@@ -9,12 +9,6 @@ const Activity = require("../activities/activity.model");
 
 const ApiError = require("../../utils/ApiError");
 
-/*
- * ============================================================
- * REPORT SOURCE MODELS
- * ============================================================
- */
-
 const MODELS = {
   leads: Lead,
   contacts: Contact,
@@ -22,12 +16,6 @@ const MODELS = {
   deals: Deal,
   tasks: Task,
 };
-
-/*
- * ============================================================
- * ALLOWED GENERIC REPORT FILTERS
- * ============================================================
- */
 
 const ALLOWED_FILTERS = new Set(["status", "source", "assignedTo", "assignedTeamId", "pipelineId", "stageId", "lifecycleStage", "companyId"]);
 
@@ -47,12 +35,6 @@ const cleanFilters = (filters = {}) => {
   return output;
 };
 
-/*
- * ============================================================
- * CREATE REPORT
- * ============================================================
- */
-
 const create = async ({ businessId, userId, data }) => {
   if (!data.name || !MODELS[data.source]) {
     throw new ApiError(400, "Valid report name and source are required.");
@@ -69,12 +51,6 @@ const create = async ({ businessId, userId, data }) => {
     groupBy: data.groupBy || null,
   });
 };
-
-/*
- * ============================================================
- * LIST REPORTS
- * ============================================================
- */
 
 const list = async ({ businessId, page = 1, limit = 25 }) => {
   page = Math.max(Number(page) || 1, 1);
@@ -107,12 +83,6 @@ const list = async ({ businessId, page = 1, limit = 25 }) => {
     },
   };
 };
-
-/*
- * ============================================================
- * RUN GENERIC REPORT
- * ============================================================
- */
 
 const run = async ({ businessId, reportId, overrideFilters = {} }) => {
   const report = await Report.findOne({
@@ -151,12 +121,6 @@ const run = async ({ businessId, reportId, overrideFilters = {} }) => {
     grouped,
   };
 };
-
-/*
- * ============================================================
- * SALES REPORT
- * ============================================================
- */
 
 const getSalesReport = async ({ businessId, dateFrom, dateTo, status, source, assignedTo }) => {
   const filter = {
@@ -347,22 +311,10 @@ const getSalesReport = async ({ businessId, dateFrom, dateTo, status, source, as
   };
 };
 
-/*
- * ============================================================
- * LEADS REPORT
- * ============================================================
- */
-
 const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, assignedTo }) => {
   const filter = {
     businessId,
   };
-
-  /*
-   * ----------------------------------------------------------
-   * STATUS FILTER
-   * ----------------------------------------------------------
-   */
 
   const allowedStatuses = ["NEW", "CONTACTED", "QUALIFIED", "UNQUALIFIED", "CONVERTED", "LOST"];
 
@@ -370,31 +322,13 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     filter.status = String(status).toUpperCase();
   }
 
-  /*
-   * ----------------------------------------------------------
-   * SOURCE FILTER
-   * ----------------------------------------------------------
-   */
-
   if (source) {
     filter.source = String(source).trim().toLowerCase();
   }
 
-  /*
-   * ----------------------------------------------------------
-   * ASSIGNED USER FILTER
-   * ----------------------------------------------------------
-   */
-
   if (assignedTo) {
     filter.assignedTo = assignedTo;
   }
-
-  /*
-   * ----------------------------------------------------------
-   * DATE FILTER
-   * ----------------------------------------------------------
-   */
 
   if (dateFrom || dateTo) {
     filter.createdAt = {};
@@ -424,12 +358,6 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     }
   }
 
-  /*
-   * ----------------------------------------------------------
-   * FETCH LEADS
-   * ----------------------------------------------------------
-   */
-
   const rows = await Lead.find(filter)
     .populate("assignedTo", "name email")
     .populate("assignedTeamId", "name")
@@ -440,12 +368,6 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     .sort({ createdAt: -1 })
     .limit(5000)
     .lean();
-
-  /*
-   * ----------------------------------------------------------
-   * SUMMARY
-   * ----------------------------------------------------------
-   */
 
   const summary = {
     totalLeads: rows.length,
@@ -466,31 +388,13 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     qualifiedRate: 0,
   };
 
-  /*
-   * ----------------------------------------------------------
-   * BREAKDOWN MAPS
-   * ----------------------------------------------------------
-   */
-
   const statusMap = {};
   const sourceMap = {};
   const ratingMap = {};
   const assignedUserMap = {};
   const assignedTeamMap = {};
 
-  /*
-   * ----------------------------------------------------------
-   * MONTHLY MAP
-   * ----------------------------------------------------------
-   */
-
   const monthlyMap = {};
-
-  /*
-   * ----------------------------------------------------------
-   * PROCESS ROWS
-   * ----------------------------------------------------------
-   */
 
   rows.forEach((lead) => {
     const leadStatus = String(lead.status || "NEW").toUpperCase();
@@ -498,10 +402,6 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     const leadRating = String(lead.rating || "WARM").toUpperCase();
 
     const leadSource = String(lead.source || "manual").trim() || "manual";
-
-    /*
-     * SUMMARY - STATUS
-     */
 
     if (leadStatus === "NEW") {
       summary.newLeads += 1;
@@ -527,10 +427,6 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
       summary.lostLeads += 1;
     }
 
-    /*
-     * SUMMARY - RATING
-     */
-
     if (leadRating === "HOT") {
       summary.hotLeads += 1;
     }
@@ -543,27 +439,11 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
       summary.coldLeads += 1;
     }
 
-    /*
-     * STATUS BREAKDOWN
-     */
-
     statusMap[leadStatus] = (statusMap[leadStatus] || 0) + 1;
-
-    /*
-     * SOURCE BREAKDOWN
-     */
 
     sourceMap[leadSource] = (sourceMap[leadSource] || 0) + 1;
 
-    /*
-     * RATING BREAKDOWN
-     */
-
     ratingMap[leadRating] = (ratingMap[leadRating] || 0) + 1;
-
-    /*
-     * ASSIGNED USER BREAKDOWN
-     */
 
     const assignedUserId = lead.assignedTo?._id ? String(lead.assignedTo._id) : "UNASSIGNED";
 
@@ -589,10 +469,6 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
       assignedUserMap[assignedUserId].converted += 1;
     }
 
-    /*
-     * ASSIGNED TEAM BREAKDOWN
-     */
-
     const assignedTeamId = lead.assignedTeamId?._id ? String(lead.assignedTeamId._id) : "UNASSIGNED";
 
     const assignedTeamName = lead.assignedTeamId ? lead.assignedTeamId.name || "Unknown Team" : "Unassigned";
@@ -614,10 +490,6 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     if (leadStatus === "CONVERTED") {
       assignedTeamMap[assignedTeamId].converted += 1;
     }
-
-    /*
-     * MONTHLY TREND
-     */
 
     if (lead.createdAt) {
       const date = new Date(lead.createdAt);
@@ -652,12 +524,6 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     }
   });
 
-  /*
-   * ----------------------------------------------------------
-   * RATES
-   * ----------------------------------------------------------
-   */
-
   if (summary.totalLeads > 0) {
     summary.conversionRate = (summary.convertedLeads / summary.totalLeads) * 100;
 
@@ -665,12 +531,6 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
 
     summary.qualifiedRate = (summary.qualifiedLeads / summary.totalLeads) * 100;
   }
-
-  /*
-   * ----------------------------------------------------------
-   * FINAL BREAKDOWNS
-   * ----------------------------------------------------------
-   */
 
   const byStatus = Object.entries(statusMap)
     .map(([statusName, count]) => ({
@@ -711,12 +571,6 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
 
   const monthly = Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month));
 
-  /*
-   * ----------------------------------------------------------
-   * RESPONSE
-   * ----------------------------------------------------------
-   */
-
   return {
     filters: {
       dateFrom: dateFrom || null,
@@ -744,23 +598,11 @@ const getLeadsReport = async ({ businessId, dateFrom, dateTo, status, source, as
   };
 };
 
-/*
- * ============================================================
- * DEALS REPORT
- * ============================================================
- */
-
 const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, assignedTo }) => {
   const filter = {
     businessId,
     isActive: true,
   };
-
-  /*
-   * ----------------------------------------------------------
-   * STATUS FILTER
-   * ----------------------------------------------------------
-   */
 
   const allowedStatuses = ["OPEN", "WON", "LOST"];
 
@@ -768,31 +610,13 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     filter.status = String(status).toUpperCase();
   }
 
-  /*
-   * ----------------------------------------------------------
-   * SOURCE FILTER
-   * ----------------------------------------------------------
-   */
-
   if (source) {
     filter.source = String(source).trim();
   }
 
-  /*
-   * ----------------------------------------------------------
-   * ASSIGNED USER FILTER
-   * ----------------------------------------------------------
-   */
-
   if (assignedTo) {
     filter.assignedTo = assignedTo;
   }
-
-  /*
-   * ----------------------------------------------------------
-   * DATE FILTER
-   * ----------------------------------------------------------
-   */
 
   if (dateFrom || dateTo) {
     filter.createdAt = {};
@@ -822,19 +646,7 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     }
   }
 
-  /*
-   * ----------------------------------------------------------
-   * FETCH DEALS
-   * ----------------------------------------------------------
-   */
-
   const rows = await Deal.find(filter).populate("assignedTo", "name email").populate("contactId", "name email phone").populate("companyId", "name").sort({ createdAt: -1 }).limit(5000).lean();
-
-  /*
-   * ----------------------------------------------------------
-   * SUMMARY
-   * ----------------------------------------------------------
-   */
 
   const summary = {
     totalDeals: rows.length,
@@ -861,39 +673,15 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     lossRate: 0,
   };
 
-  /*
-   * ----------------------------------------------------------
-   * BREAKDOWN MAPS
-   * ----------------------------------------------------------
-   */
-
   const statusMap = {};
   const sourceMap = {};
   const assignedUserMap = {};
   const companyMap = {};
   const pipelineMap = {};
 
-  /*
-   * ----------------------------------------------------------
-   * MONTHLY MAP
-   * ----------------------------------------------------------
-   */
-
   const monthlyMap = {};
 
-  /*
-   * ----------------------------------------------------------
-   * CURRENCY MAP
-   * ----------------------------------------------------------
-   */
-
   const currencyMap = {};
-
-  /*
-   * ----------------------------------------------------------
-   * PROCESS DEALS
-   * ----------------------------------------------------------
-   */
 
   rows.forEach((deal) => {
     const value = Number(deal.value) || 0;
@@ -907,10 +695,6 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     const currency = String(deal.currency || "INR")
       .trim()
       .toUpperCase();
-
-    /*
-     * SUMMARY
-     */
 
     summary.totalValue += value;
 
@@ -935,15 +719,7 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
       summary.lostValue += value;
     }
 
-    /*
-     * STATUS BREAKDOWN
-     */
-
     statusMap[dealStatus] = (statusMap[dealStatus] || 0) + 1;
-
-    /*
-     * SOURCE BREAKDOWN
-     */
 
     if (!sourceMap[dealSource]) {
       sourceMap[dealSource] = {
@@ -961,10 +737,6 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     if (dealStatus === "WON") {
       sourceMap[dealSource].wonRevenue += value;
     }
-
-    /*
-     * ASSIGNED USER BREAKDOWN
-     */
 
     const assignedUserId = deal.assignedTo?._id ? String(deal.assignedTo._id) : "UNASSIGNED";
 
@@ -1010,10 +782,6 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
       assignedUserMap[assignedUserId].lostDeals += 1;
     }
 
-    /*
-     * COMPANY BREAKDOWN
-     */
-
     const companyId = deal.companyId?._id ? String(deal.companyId._id) : "UNASSIGNED";
 
     const companyName = deal.companyId ? deal.companyId.name || "Unknown Company" : "No Company";
@@ -1043,10 +811,6 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
 
       companyMap[companyId].wonRevenue += value;
     }
-
-    /*
-     * PIPELINE BREAKDOWN
-     */
 
     const pipelineId = deal.pipelineId ? String(deal.pipelineId) : "UNASSIGNED";
 
@@ -1094,10 +858,6 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
       pipelineMap[pipelineId].lostValue += value;
     }
 
-    /*
-     * CURRENCY BREAKDOWN
-     */
-
     if (!currencyMap[currency]) {
       currencyMap[currency] = {
         currency,
@@ -1117,13 +877,6 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     if (dealStatus === "WON") {
       currencyMap[currency].wonRevenue += value;
     }
-
-    /*
-     * MONTHLY TREND
-     *
-     * Use expectedCloseDate when available.
-     * Otherwise use wonAt, then createdAt.
-     */
 
     const dateValue = deal.expectedCloseDate || deal.wonAt || deal.createdAt;
 
@@ -1180,12 +933,6 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     }
   });
 
-  /*
-   * ----------------------------------------------------------
-   * FINAL SUMMARY CALCULATIONS
-   * ----------------------------------------------------------
-   */
-
   if (summary.totalDeals > 0) {
     summary.averageDealValue = summary.totalValue / summary.totalDeals;
 
@@ -1196,12 +943,6 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     summary.lossRate = (summary.lostDeals / summary.totalDeals) * 100;
   }
 
-  /*
-   * ----------------------------------------------------------
-   * FINAL STATUS BREAKDOWN
-   * ----------------------------------------------------------
-   */
-
   const byStatus = Object.entries(statusMap)
     .map(([statusName, count]) => ({
       status: statusName,
@@ -1210,19 +951,7 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     }))
     .sort((a, b) => b.deals - a.deals);
 
-  /*
-   * ----------------------------------------------------------
-   * FINAL SOURCE BREAKDOWN
-   * ----------------------------------------------------------
-   */
-
   const bySource = Object.values(sourceMap).sort((a, b) => b.value - a.value);
-
-  /*
-   * ----------------------------------------------------------
-   * FINAL ASSIGNED USER BREAKDOWN
-   * ----------------------------------------------------------
-   */
 
   const byAssignedUser = Object.values(assignedUserMap)
     .map((item) => ({
@@ -1232,43 +961,13 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
     }))
     .sort((a, b) => b.value - a.value);
 
-  /*
-   * ----------------------------------------------------------
-   * FINAL COMPANY BREAKDOWN
-   * ----------------------------------------------------------
-   */
-
   const byCompany = Object.values(companyMap).sort((a, b) => b.value - a.value);
-
-  /*
-   * ----------------------------------------------------------
-   * FINAL PIPELINE BREAKDOWN
-   * ----------------------------------------------------------
-   */
 
   const byPipeline = Object.values(pipelineMap).sort((a, b) => b.value - a.value);
 
-  /*
-   * ----------------------------------------------------------
-   * FINAL CURRENCY BREAKDOWN
-   * ----------------------------------------------------------
-   */
-
   const currencies = Object.values(currencyMap).sort((a, b) => b.value - a.value);
 
-  /*
-   * ----------------------------------------------------------
-   * FINAL MONTHLY BREAKDOWN
-   * ----------------------------------------------------------
-   */
-
   const monthly = Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month));
-
-  /*
-   * ----------------------------------------------------------
-   * RESPONSE
-   * ----------------------------------------------------------
-   */
 
   return {
     filters: {
@@ -1299,44 +998,22 @@ const getDealsReport = async ({ businessId, dateFrom, dateTo, status, source, as
   };
 };
 
-/*
- * ============================================================
- * ACTIVITIES REPORT
- * ============================================================
- */
-
 const getActivitiesReport = async ({ businessId, dateFrom, dateTo, type, status, assignedTo }) => {
   const filter = {
     businessId,
   };
 
-  /* ----------------------------------------------------------
-   * TYPE FILTER
-   * ---------------------------------------------------------- */
-
   if (type) {
     filter.type = String(type).trim().toUpperCase();
   }
-
-  /* ----------------------------------------------------------
-   * STATUS FILTER
-   * ---------------------------------------------------------- */
 
   if (status) {
     filter.status = String(status).trim().toUpperCase();
   }
 
-  /* ----------------------------------------------------------
-   * ASSIGNED USER FILTER
-   * ---------------------------------------------------------- */
-
   if (assignedTo) {
     filter.assignedTo = assignedTo;
   }
-
-  /* ----------------------------------------------------------
-   * DATE FILTER
-   * ---------------------------------------------------------- */
 
   if (dateFrom || dateTo) {
     filter.createdAt = {};
@@ -1364,23 +1041,11 @@ const getActivitiesReport = async ({ businessId, dateFrom, dateTo, type, status,
     }
   }
 
-  /* ----------------------------------------------------------
-   * FETCH ACTIVITIES
-   * ---------------------------------------------------------- */
-
   const activities = await Activity.find(filter).populate("assignedTo", "name email").sort({ createdAt: -1 }).lean();
-
-  /* ----------------------------------------------------------
-   * SUMMARY
-   * ---------------------------------------------------------- */
 
   const summary = {
     total: activities.length,
   };
-
-  /* ----------------------------------------------------------
-   * BY TYPE
-   * ---------------------------------------------------------- */
 
   const typeMap = {};
 
@@ -1399,10 +1064,6 @@ const getActivitiesReport = async ({ businessId, dateFrom, dateTo, type, status,
 
   const byType = Object.values(typeMap).sort((a, b) => b.count - a.count);
 
-  /* ----------------------------------------------------------
-   * BY STATUS
-   * ---------------------------------------------------------- */
-
   const statusMap = {};
 
   activities.forEach((activity) => {
@@ -1419,10 +1080,6 @@ const getActivitiesReport = async ({ businessId, dateFrom, dateTo, type, status,
   });
 
   const byStatus = Object.values(statusMap).sort((a, b) => b.count - a.count);
-
-  /* ----------------------------------------------------------
-   * BY ASSIGNED USER
-   * ---------------------------------------------------------- */
 
   const assignedUserMap = {};
 
@@ -1444,10 +1101,6 @@ const getActivitiesReport = async ({ businessId, dateFrom, dateTo, type, status,
   });
 
   const byAssignedUser = Object.values(assignedUserMap).sort((a, b) => b.count - a.count);
-
-  /* ----------------------------------------------------------
-   * MONTHLY
-   * ---------------------------------------------------------- */
 
   const monthlyMap = {};
 
@@ -1476,10 +1129,6 @@ const getActivitiesReport = async ({ businessId, dateFrom, dateTo, type, status,
 
   const monthly = Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month));
 
-  /* ----------------------------------------------------------
-   * RESPONSE
-   * ---------------------------------------------------------- */
-
   return {
     filters: {
       dateFrom: dateFrom || null,
@@ -1502,12 +1151,6 @@ const getActivitiesReport = async ({ businessId, dateFrom, dateTo, type, status,
     rows: activities,
   };
 };
-
-/*
- * ============================================================
- * UPDATE REPORT
- * ============================================================
- */
 
 const update = async ({ businessId, reportId, userId, data }) => {
   const report = await Report.findOne({
@@ -1554,12 +1197,6 @@ const update = async ({ businessId, reportId, userId, data }) => {
   return report;
 };
 
-/*
- * ============================================================
- * DELETE REPORT
- * ============================================================
- */
-
 const remove = async ({ businessId, reportId }) => {
   const result = await Report.deleteOne({
     _id: reportId,
@@ -1574,12 +1211,6 @@ const remove = async ({ businessId, reportId }) => {
     deleted: true,
   };
 };
-
-/*
- * ============================================================
- * EXPORTS
- * ============================================================
- */
 
 module.exports = {
   create,

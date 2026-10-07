@@ -6,12 +6,6 @@ const ALLOWED_STATUS = ["DRAFT", "PUBLISHED", "ARCHIVED"];
 
 const ALLOWED_MEDIA_TYPES = ["NONE", "IMAGE", "VIDEO"];
 
-/*
- * ============================================================
- * COMMON
- * ============================================================
- */
-
 const objectIdValidator = [param("whatsNewId").trim().notEmpty().withMessage("What's New ID is required").isMongoId().withMessage("Invalid What's New ID")];
 
 const slugValidator = [
@@ -27,15 +21,6 @@ const slugValidator = [
     .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
     .withMessage("Invalid slug"),
 ];
-
-/*
- * ============================================================
- * IMAGE URL VALIDATION
- * ============================================================
- *
- * Admin Cloudinary/public image URL paste karega.
- * File upload / Multer ki zarurat nahi hai.
- */
 
 const imageUrlValidator = (field) =>
   body(field)
@@ -71,12 +56,6 @@ const imageUrlValidator = (field) =>
         throw new Error(`${field} must be a valid image URL`);
       }
     });
-
-/*
- * ============================================================
- * CREATE
- * ============================================================
- */
 
 const createWhatsNewValidator = [
   body("title")
@@ -136,15 +115,7 @@ const createWhatsNewValidator = [
 
   body("mediaType").optional().isIn(ALLOWED_MEDIA_TYPES).withMessage("Invalid media type"),
 
-  /*
-   * IMAGE
-   */
-
   imageUrlValidator("imageUrl"),
-
-  /*
-   * VIDEO
-   */
 
   body("videoUrl")
     .optional({
@@ -162,10 +133,6 @@ const createWhatsNewValidator = [
   body("videoAutoplay").optional().isBoolean().withMessage("videoAutoplay must be a boolean").toBoolean(),
 
   body("videoLoop").optional().isBoolean().withMessage("videoLoop must be a boolean").toBoolean(),
-
-  /*
-   * OTHER
-   */
 
   body("howToUse")
     .optional({
@@ -221,12 +188,6 @@ const createWhatsNewValidator = [
 
   body("sortOrder").optional().isInt().withMessage("sortOrder must be an integer"),
 ];
-
-/*
- * ============================================================
- * UPDATE
- * ============================================================
- */
 
 const updateWhatsNewValidator = [
   ...objectIdValidator,
@@ -291,18 +252,7 @@ const updateWhatsNewValidator = [
 
   body("mediaType").optional().isIn(ALLOWED_MEDIA_TYPES).withMessage("Invalid media type"),
 
-  /*
-   * IMAGE
-   *
-   * Optional rakha gaya hai taaki edit ke time
-   * imageUrl na bhejne par old image preserve ho.
-   */
-
   imageUrlValidator("imageUrl"),
-
-  /*
-   * VIDEO
-   */
 
   body("videoUrl")
     .optional({
@@ -320,10 +270,6 @@ const updateWhatsNewValidator = [
   body("videoAutoplay").optional().isBoolean().withMessage("videoAutoplay must be a boolean").toBoolean(),
 
   body("videoLoop").optional().isBoolean().withMessage("videoLoop must be a boolean").toBoolean(),
-
-  /*
-   * OTHER
-   */
 
   body("howToUse")
     .optional({
@@ -380,12 +326,6 @@ const updateWhatsNewValidator = [
   body("sortOrder").optional().isInt().withMessage("sortOrder must be an integer"),
 ];
 
-/*
- * ============================================================
- * LIST
- * ============================================================
- */
-
 const listWhatsNewValidator = [
   query("type").optional().isIn(ALLOWED_TYPES).withMessage("Invalid What's New type"),
 
@@ -415,19 +355,7 @@ const listWhatsNewValidator = [
     .withMessage("Limit must be between 1 and 100"),
 ];
 
-/*
- * ============================================================
- * STATUS
- * ============================================================
- */
-
 const statusValidator = [...objectIdValidator, body("status").notEmpty().withMessage("Status is required").isIn(ALLOWED_STATUS).withMessage("Invalid What's New status")];
-
-/*
- * ============================================================
- * EXPORTS
- * ============================================================
- */
 
 module.exports = {
   objectIdValidator,

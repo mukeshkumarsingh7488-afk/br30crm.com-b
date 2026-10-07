@@ -4,6 +4,7 @@ const BusinessMember = require("../business-members/business-member.model");
 const Team = require("../teams/team.model");
 const Contact = require("../contacts/contact.model");
 const Company = require("../companies/company.model");
+const LeadAttribution = require("../lead-attribution/lead-attribution.model");
 
 const ApiError = require("../../utils/ApiError");
 const { resolveRecordAccess, applyRecordVisibility, assertRecordAccess } = require("../../utils/recordAccess");
@@ -118,6 +119,11 @@ const createLead = async ({ businessId, firstName, lastName, name, email, phone,
 
   const normalizedEmail = normalizeEmail(email);
 
+  const normalizedSource =
+    String(source || "manual")
+      .trim()
+      .toLowerCase() || "manual";
+
   const lead = await Lead.create({
     businessId,
     firstName: firstName || null,
@@ -127,7 +133,7 @@ const createLead = async ({ businessId, firstName, lastName, name, email, phone,
     phone: phone || null,
     companyName: companyName || null,
     jobTitle: jobTitle || null,
-    source: source || "manual",
+    source: normalizedSource,
     status: status || "NEW",
     rating: rating || "WARM",
     description: description || null,
@@ -135,6 +141,16 @@ const createLead = async ({ businessId, firstName, lastName, name, email, phone,
     assignedTeamId: assignedTeamId || null,
     tags: Array.isArray(tags) ? [...new Set(tags)] : [],
     customFields: customFields && typeof customFields === "object" ? customFields : {},
+    createdBy,
+  });
+
+  await LeadAttribution.create({
+    businessId,
+    leadId: lead._id,
+    source: normalizedSource,
+    attributionType: "FIRST_TOUCH",
+    touchType: "FIRST",
+    capturedAt: lead.createdAt || new Date(),
     createdBy,
   });
 
@@ -302,6 +318,7 @@ const updateLead = async (leadId, businessId, updates, updatedBy, access = null)
 
   if (access) assertRecordAccess(lead, await resolveRecordAccess(businessId, access));
 
+  const previousSource = lead.source || "manual";
   const allowedFields = ["firstName", "lastName", "name", "email", "phone", "companyName", "jobTitle", "source", "status", "rating", "description", "tags", "customFields"];
 
   for (const field of allowedFields) {
@@ -333,6 +350,26 @@ const updateLead = async (leadId, businessId, updates, updatedBy, access = null)
   lead.updatedBy = updatedBy;
 
   await lead.save();
+
+  if (
+    updates.source !== undefined &&
+    String(updates.source || "manual")
+      .trim()
+      .toLowerCase() !== String(previousSource).trim().toLowerCase()
+  ) {
+    await LeadAttribution.create({
+      businessId,
+      leadId: lead._id,
+      source:
+        String(updates.source || "manual")
+          .trim()
+          .toLowerCase() || "manual",
+      attributionType: "LAST_TOUCH",
+      touchType: "LAST",
+      capturedAt: new Date(),
+      createdBy: updatedBy,
+    });
+  }
 
   return getLeadByIdForBusiness(leadId, businessId);
 };
@@ -375,18 +412,6 @@ const assignLead = async (leadId, businessId, assignedTo, assignedTeamId, update
   return getLeadByIdForBusiness(leadId, businessId);
 };
 
-/**
- * Convert Lead into Contact + optional Company.
- *
- * Flow:
- * Lead
- *   ↓
- * Company (existing / newly created / none)
- *   ↓
- * Contact
- *   ↓
- * Lead marked CONVERTED
- */
 const convertLead = async ({ leadId, businessId, companyId, convertedBy }) => {
   await getBusiness(businessId);
 
@@ -412,17 +437,10 @@ const convertLead = async ({ leadId, businessId, companyId, convertedBy }) => {
 
   let company = null;
 
-  /*
-   * 1. Explicit existing company
-   */
   if (companyId) {
     company = await verifyCompany(businessId, companyId);
   }
 
-  /*
-   * 2. If no companyId is supplied but lead has companyName,
-   *    try to reuse an existing company with the same name.
-   */
   if (!company && lead.companyName) {
     const companyName = lead.companyName.trim();
 
@@ -435,10 +453,6 @@ const convertLead = async ({ leadId, businessId, companyId, convertedBy }) => {
     });
   }
 
-  /*
-   * 3. Create company if the lead has companyName
-   *    and no matching company exists.
-   */
   if (!company && lead.companyName) {
     company = await Company.create({
       businessId,
@@ -462,10 +476,6 @@ const convertLead = async ({ leadId, businessId, companyId, convertedBy }) => {
     });
   }
 
-  /*
-   * Contact requires firstName.
-   * If lead.firstName is missing, derive it from lead.name.
-   */
   let firstName = lead.firstName;
 
   let lastName = lead.lastName || null;
@@ -484,9 +494,6 @@ const convertLead = async ({ leadId, businessId, companyId, convertedBy }) => {
     throw new ApiError(400, "Lead cannot be converted because a contact first name is required.");
   }
 
-  /*
-   * Create Contact.
-   */
   const contact = await Contact.create({
     businessId,
     firstName,
@@ -509,9 +516,6 @@ const convertLead = async ({ leadId, businessId, companyId, convertedBy }) => {
     createdBy: convertedBy,
   });
 
-  /*
-   * Update Lead conversion references.
-   */
   lead.status = "CONVERTED";
   lead.convertedAt = new Date();
   lead.convertedContactId = contact._id;

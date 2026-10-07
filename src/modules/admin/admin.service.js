@@ -73,12 +73,6 @@ const getDashboardStats = async ({ page = 1, limit = 20 } = {}) => {
   };
 };
 
-/*
- * ============================================================
- * GET SINGLE USER
- * ============================================================
- */
-
 const getUserById = async (userId) => {
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     throw new ApiError(400, "Invalid user ID.");
@@ -112,19 +106,6 @@ const getUserById = async (userId) => {
     memberships,
   };
 };
-
-/*
- * ============================================================
- * UPDATE USER
- * ============================================================
- *
- * Admin can update:
- * - Name
- * - Email
- * - Phone
- *
- * Password is intentionally NOT editable from this endpoint.
- */
 
 const updateUser = async (userId, { name, email, phone }) => {
   if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -173,8 +154,6 @@ const updateUser = async (userId, { name, email, phone }) => {
       }
 
       updates.email = normalizedEmail;
-
-      // Admin-edited email is considered verified.
       updates.emailVerified = true;
       updates.emailVerificationOtpHash = null;
       updates.emailVerificationOtpExpiresAt = null;
@@ -200,12 +179,6 @@ const updateUser = async (userId, { name, email, phone }) => {
   return User.findById(user._id).select("_id name email phone profileImage profileImagePublicId status emailVerified lastLoginAt createdAt updatedAt").lean();
 };
 
-/*
- * ============================================================
- * BLOCK / UNBLOCK USER
- * ============================================================
- */
-
 const updateUserStatus = async (userId, status) => {
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     throw new ApiError(400, "Invalid user ID.");
@@ -229,12 +202,6 @@ const updateUserStatus = async (userId, status) => {
 
   return User.findById(user._id).select("_id name email phone profileImage profileImagePublicId status emailVerified lastLoginAt createdAt updatedAt").lean();
 };
-
-/*
- * ============================================================
- * DELETE USER
- * ============================================================
- */
 
 const deleteUser = async (userId, adminUserId) => {
   if (!mongoose.Types.ObjectId.isValid(userId)) {

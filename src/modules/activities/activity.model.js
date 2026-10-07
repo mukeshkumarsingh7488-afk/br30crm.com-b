@@ -166,45 +166,30 @@ const activitySchema = new mongoose.Schema(
   }
 );
 
-/*
- * Business + status + due date
- */
 activitySchema.index({
   businessId: 1,
   status: 1,
   dueAt: 1,
 });
 
-/*
- * Business + assigned user + newest activities
- */
 activitySchema.index({
   businessId: 1,
   assignedTo: 1,
   createdAt: -1,
 });
 
-/*
- * Business + deleted state + newest activities
- */
 activitySchema.index({
   businessId: 1,
   isDeleted: 1,
   createdAt: -1,
 });
 
-/*
- * Business + activity type + newest activities
- */
 activitySchema.index({
   businessId: 1,
   type: 1,
   createdAt: -1,
 });
 
-/*
- * Business + priority + newest activities
- */
 activitySchema.index({
   businessId: 1,
   priority: 1,

@@ -1,24 +1,9 @@
 const { body, param, query } = require("express-validator");
 
-/*
- * ============================================================
- * BUSINESS ID VALIDATOR
- * ============================================================
- */
 const businessIdValidator = [param("businessId").trim().notEmpty().withMessage("Business ID is required").isMongoId().withMessage("Invalid business ID")];
 
-/*
- * ============================================================
- * CONTACT ID VALIDATOR
- * ============================================================
- */
 const contactIdValidator = [param("contactId").trim().notEmpty().withMessage("Contact ID is required").isMongoId().withMessage("Invalid contact ID")];
 
-/*
- * ============================================================
- * ADDRESS VALIDATOR
- * ============================================================
- */
 const addressValidator = [
   body("address").optional().isObject().withMessage("Address must be an object"),
 
@@ -73,11 +58,6 @@ const addressValidator = [
     .withMessage("Postal code cannot exceed 30 characters"),
 ];
 
-/*
- * ============================================================
- * CREATE CONTACT VALIDATOR
- * ============================================================
- */
 const createContactValidator = [
   ...businessIdValidator,
 
@@ -190,14 +170,6 @@ const createContactValidator = [
 
   body("customFields").optional().isObject().withMessage("Custom fields must be an object"),
 
-  /*
-   * ----------------------------------------------------------
-   * Lead → Contact relationship
-   *
-   * Allowed during creation because Lead conversion creates
-   * the Contact with sourceLeadId.
-   * ----------------------------------------------------------
-   */
   body("sourceLeadId")
     .optional({
       values: "null",
@@ -208,18 +180,6 @@ const createContactValidator = [
   ...addressValidator,
 ];
 
-/*
- * ============================================================
- * UPDATE CONTACT VALIDATOR
- * ============================================================
- *
- * IMPORTANT:
- * sourceLeadId is intentionally NOT allowed here.
- *
- * Lead ↔ Contact conversion relationship should not be changed
- * through normal Contact edit.
- * ============================================================
- */
 const updateContactValidator = [
   ...businessIdValidator,
   ...contactIdValidator,
@@ -337,22 +297,6 @@ const updateContactValidator = [
   ...addressValidator,
 ];
 
-/*
- * ============================================================
- * GET CONTACTS VALIDATOR
- * ============================================================
- *
- * Supports:
- * - pagination
- * - search
- * - status
- * - lifecycle stage
- * - source
- * - company
- * - assigned user
- * - assigned team
- * ============================================================
- */
 const getContactsValidator = [
   ...businessIdValidator,
 
@@ -400,24 +344,8 @@ const getContactsValidator = [
   query("assignedTeamId").optional().isMongoId().withMessage("Invalid assigned team ID"),
 ];
 
-/*
- * ============================================================
- * GET SINGLE CONTACT VALIDATOR
- * ============================================================
- */
 const getContactValidator = [...businessIdValidator, ...contactIdValidator];
 
-/*
- * ============================================================
- * ASSIGN CONTACT VALIDATOR
- * ============================================================
- *
- * At least one of assignedTo / assignedTeamId is expected
- * by the service layer.
- *
- * Both can also be supplied together.
- * ============================================================
- */
 const assignContactValidator = [
   ...businessIdValidator,
   ...contactIdValidator,
@@ -437,11 +365,6 @@ const assignContactValidator = [
     .withMessage("Invalid assigned team ID"),
 ];
 
-/*
- * ============================================================
- * DELETE CONTACT VALIDATOR
- * ============================================================
- */
 const deleteContactValidator = [...businessIdValidator, ...contactIdValidator];
 
 module.exports = {

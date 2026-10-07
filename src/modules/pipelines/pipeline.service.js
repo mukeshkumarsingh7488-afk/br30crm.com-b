@@ -1,4 +1,5 @@
 const Pipeline = require("./pipeline.model");
+const Deal = require("../deals/deal.model");
 const Business = require("../businesses/business.model");
 
 const ApiError = require("../../utils/ApiError");
@@ -544,7 +545,6 @@ const deletePipeline = async (pipelineId, businessId, deletedBy) => {
   await getBusiness(businessId);
 
   validateObjectId(pipelineId, "pipeline ID");
-
   validateObjectId(deletedBy, "deleted by user ID");
 
   const pipeline = await Pipeline.findOne({
@@ -557,33 +557,24 @@ const deletePipeline = async (pipelineId, businessId, deletedBy) => {
   }
 
   if (pipeline.isDefault) {
-    const replacement = await Pipeline.findOne({
-      businessId,
-      status: "ACTIVE",
-      _id: {
-        $ne: pipelineId,
-      },
-    }).sort({
-      createdAt: 1,
-    });
-
-    if (!replacement) {
-      throw new ApiError(409, "The default pipeline cannot be deactivated because this business has no other active pipeline.");
-    }
-
-    replacement.isDefault = true;
-    replacement.updatedBy = deletedBy;
-
-    await replacement.save();
+    throw new ApiError(400, "Default pipeline cannot be deleted. Set another pipeline as default first.");
   }
 
-  pipeline.status = "INACTIVE";
-  pipeline.isDefault = false;
-  pipeline.updatedBy = deletedBy;
+  const dealExists = await Deal.exists({
+    businessId,
+    pipelineId: pipeline._id,
+  });
 
-  await pipeline.save();
+  if (dealExists) {
+    throw new ApiError(400, "This pipeline is assigned to existing deals and cannot be deleted.");
+  }
 
-  return getPipelineByIdForBusiness(pipelineId, businessId);
+  await Pipeline.deleteOne({
+    _id: pipeline._id,
+    businessId,
+  });
+
+  return pipeline;
 };
 
 module.exports = {

@@ -53,8 +53,14 @@ const getDeliveries = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, result, "Webhook deliveries fetched successfully.");
 });
 
-const retryDelivery = asyncHandler(async (req, res) => { const result = await webhookService.retryDelivery(req.params.deliveryId, req.params.businessId); return ApiResponse.success(res, result, "Webhook delivery retry queued successfully."); });
-const getDeliveryById = asyncHandler(async (req, res) => { const delivery = await webhookService.getDeliveryById(req.params.deliveryId, req.params.businessId); return ApiResponse.success(res, { delivery }, "Webhook delivery fetched successfully."); });
+const retryDelivery = asyncHandler(async (req, res) => {
+  const result = await webhookService.retryDelivery(req.params.deliveryId, req.params.businessId);
+  return ApiResponse.success(res, result, "Webhook delivery retry queued successfully.");
+});
+const getDeliveryById = asyncHandler(async (req, res) => {
+  const delivery = await webhookService.getDeliveryById(req.params.deliveryId, req.params.businessId);
+  return ApiResponse.success(res, { delivery }, "Webhook delivery fetched successfully.");
+});
 
 const deleteWebhook = asyncHandler(async (req, res) => {
   const result = await webhookService.deleteWebhook(req.params.webhookId, req.params.businessId, req.user.userId);

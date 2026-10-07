@@ -112,10 +112,6 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
-
-    // ============================================================
-    // LEGAL CONSENT
-    // ============================================================
     legalConsent: {
       accepted: {
         type: Boolean,

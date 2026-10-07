@@ -13,8 +13,6 @@ const forgotPassword = async (email) => {
   const normalizedEmail = email.toLowerCase().trim();
 
   const user = await findUserByEmail(normalizedEmail, true);
-
-  // Do not reveal whether an email exists.
   if (!user) {
     return {
       passwordResetRequired: true,
@@ -140,14 +138,10 @@ const resetPassword = async ({ email, otp, newPassword }) => {
   const passwordHash = await hashPassword(newPassword);
 
   user.password = passwordHash;
-
-  // Consume the OTP immediately.
   user.passwordResetOtpHash = null;
   user.passwordResetOtpExpiresAt = null;
   user.passwordResetAttempts = 0;
   user.passwordResetLastSentAt = null;
-
-  // Invalidate all existing refresh sessions.
   user.refreshTokenHash = null;
   await user.save();
   await sessionService.revokeAll(user._id);

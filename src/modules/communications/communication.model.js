@@ -47,24 +47,6 @@ const communicationSchema = new mongoose.Schema(
       maxlength: 20000,
     },
 
-    /*
-     * OUTBOUND lifecycle:
-     *
-     * QUEUED
-     *    ↓
-     * SENT
-     *    ↓
-     * DELIVERED
-     *
-     * or
-     *
-     * SENT
-     *    ↓
-     * FAILED
-     *
-     * Inbound:
-     * RECEIVED
-     */
     status: {
       type: String,
       enum: ["QUEUED", "SENT", "DELIVERED", "FAILED", "RECEIVED"],
@@ -78,15 +60,6 @@ const communicationSchema = new mongoose.Schema(
       default: null,
     },
 
-    /*
-     * Brevo provider message ID.
-     *
-     * IMPORTANT:
-     * This field is NOT unique.
-     *
-     * Brevo/API/webhook may temporarily not provide an ID.
-     * Multiple records with null IDs must be allowed.
-     */
     providerMessageId: {
       type: String,
       trim: true,
@@ -128,51 +101,23 @@ const communicationSchema = new mongoose.Schema(
   }
 );
 
-/*
- * ============================================================
- * INDEXES
- * ============================================================
- */
-
-/*
- * Business communication history
- */
 communicationSchema.index({
   businessId: 1,
   createdAt: -1,
 });
 
-/*
- * Recipient + channel lookup
- */
 communicationSchema.index({
   businessId: 1,
   to: 1,
   channel: 1,
 });
 
-/*
- * Provider message lookup
- *
- * IMPORTANT:
- * NOT UNIQUE.
- *
- * This prevents the old:
- *
- * E11000 duplicate key error
- * providerMessageId: null
- *
- * problem.
- */
 communicationSchema.index({
   businessId: 1,
   channel: 1,
   providerMessageId: 1,
 });
 
-/*
- * Direction + history
- */
 communicationSchema.index({
   businessId: 1,
   direction: 1,

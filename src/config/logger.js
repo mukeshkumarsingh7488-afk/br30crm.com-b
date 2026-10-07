@@ -3,21 +3,15 @@ const env = require("./env");
 const logger = {
   info: (...args) => {
     if (env.logLevel !== "silent") {
-      console.log("[INFO]", ...args);
     }
   },
 
-  warn: (...args) => {
-    console.warn("[WARN]", ...args);
-  },
+  warn: (...args) => {},
 
-  error: (...args) => {
-    console.error("[ERROR]", ...args);
-  },
+  error: (...args) => {},
 
   debug: (...args) => {
     if (env.nodeEnv !== "production") {
-      console.debug("[DEBUG]", ...args);
     }
   },
 };

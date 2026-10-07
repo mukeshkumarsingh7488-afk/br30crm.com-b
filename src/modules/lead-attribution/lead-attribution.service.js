@@ -142,6 +142,41 @@ const resolveCampaign = async (businessId, campaignId, campaign) => {
   };
 };
 
+const ensureLeadFirstTouch = async ({ businessId, userId, leadId, lead }) => {
+  const existing = await LeadAttribution.find({
+    businessId,
+    leadId,
+    attributionType: "FIRST_TOUCH",
+  })
+    .sort({ capturedAt: 1, createdAt: 1 })
+    .lean();
+
+  if (existing.length > 0) {
+    const [first, ...duplicates] = existing;
+
+    if (duplicates.length) {
+      await LeadAttribution.deleteMany({
+        _id: { $in: duplicates.map((item) => item._id) },
+        businessId,
+        leadId,
+        attributionType: "FIRST_TOUCH",
+      });
+    }
+
+    return first;
+  }
+
+  return LeadAttribution.create({
+    businessId,
+    leadId,
+    source: String(lead?.source || "manual").trim().toLowerCase() || "manual",
+    attributionType: "FIRST_TOUCH",
+    touchType: "FIRST",
+    capturedAt: lead?.createdAt || new Date(),
+    createdBy: userId || lead?.createdBy || null,
+  });
+};
+
 const normalizePayload = async ({ businessId, data = {} }) => {
   const sourceResult = await resolveSource(businessId, data.sourceId, data.source);
 
@@ -209,7 +244,8 @@ exports.create = async ({ businessId, userId, leadId, data }) => {
 
 exports.listByLead = async ({ businessId, userId, leadId }) => {
   await ensureBusiness(businessId, userId);
-  await ensureLead(businessId, leadId);
+  const lead = await ensureLead(businessId, leadId);
+  await ensureLeadFirstTouch({ businessId, userId, leadId, lead });
 
   return LeadAttribution.find({
     businessId,
@@ -224,7 +260,8 @@ exports.listByLead = async ({ businessId, userId, leadId }) => {
 
 exports.getLeadAttribution = async ({ businessId, userId, leadId }) => {
   await ensureBusiness(businessId, userId);
-  await ensureLead(businessId, leadId);
+  const lead = await ensureLead(businessId, leadId);
+  await ensureLeadFirstTouch({ businessId, userId, leadId, lead });
 
   const records = await LeadAttribution.find({
     businessId,
@@ -236,9 +273,9 @@ exports.getLeadAttribution = async ({ businessId, userId, leadId }) => {
     .sort({ capturedAt: 1 })
     .lean();
 
-  const firstTouch = records.find((item) => item.attributionType === "FIRST_TOUCH") || records[0] || null;
+  const firstTouch = records.find((item) => item.attributionType === "FIRST_TOUCH") || null;
 
-  const lastTouch = [...records].reverse().find((item) => item.attributionType === "LAST_TOUCH") || records[records.length - 1] || null;
+  const lastTouch = [...records].reverse().find((item) => item.attributionType === "LAST_TOUCH") || firstTouch || null;
 
   return {
     firstTouch,
@@ -303,30 +340,8 @@ exports.remove = async ({ businessId, userId, attributionId }) => {
 
 exports.firstTouch = async ({ businessId, userId, leadId, data }) => {
   await ensureBusiness(businessId, userId);
-  await ensureLead(businessId, leadId);
-
-  const existing = await LeadAttribution.findOne({
-    businessId,
-    leadId,
-    attributionType: "FIRST_TOUCH",
-  })
-    .sort({ capturedAt: 1 })
-    .lean();
-
-  if (existing) {
-    return existing;
-  }
-
-  return exports.create({
-    businessId,
-    userId,
-    leadId,
-    data: {
-      ...data,
-      attributionType: "FIRST_TOUCH",
-      touchType: "FIRST",
-    },
-  });
+  const lead = await ensureLead(businessId, leadId);
+  return ensureLeadFirstTouch({ businessId, userId, leadId, lead });
 };
 
 exports.lastTouch = async ({ businessId, userId, leadId, data }) => {

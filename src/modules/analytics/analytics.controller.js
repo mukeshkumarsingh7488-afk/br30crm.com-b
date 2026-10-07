@@ -10,7 +10,7 @@ const getOverview = asyncHandler(async (req, res) => {
     endDate: req.query.endDate,
   });
 
-  return res.status(200).json(new ApiResponse(200, result, "Analytics overview fetched successfully"));
+  return ApiResponse.success(res, result, "Analytics overview fetched successfully");
 });
 
 const getMetric = asyncHandler(async (req, res) => {
@@ -20,9 +20,10 @@ const getMetric = asyncHandler(async (req, res) => {
     metric: req.params.metric,
     startDate: req.query.startDate,
     endDate: req.query.endDate,
+    period: req.query.period,
   });
 
-  return res.status(200).json(new ApiResponse(200, result, "Analytics metric fetched successfully"));
+  return ApiResponse.success(res, result, "Analytics metric fetched successfully");
 });
 
 const getSnapshots = asyncHandler(async (req, res) => {
@@ -37,7 +38,7 @@ const getSnapshots = asyncHandler(async (req, res) => {
     limit: req.query.limit,
   });
 
-  return res.status(200).json(new ApiResponse(200, result, "Analytics snapshots fetched successfully"));
+  return ApiResponse.success(res, result, "Analytics snapshots fetched successfully");
 });
 
 const getSnapshotById = asyncHandler(async (req, res) => {
@@ -47,7 +48,7 @@ const getSnapshotById = asyncHandler(async (req, res) => {
     snapshotId: req.params.snapshotId,
   });
 
-  return res.status(200).json(new ApiResponse(200, snapshot, "Analytics snapshot fetched successfully"));
+  return ApiResponse.success(res, snapshot, "Analytics snapshot fetched successfully");
 });
 
 const createSnapshot = asyncHandler(async (req, res) => {
@@ -57,7 +58,7 @@ const createSnapshot = asyncHandler(async (req, res) => {
     data: req.body,
   });
 
-  return res.status(201).json(new ApiResponse(201, snapshot, "Analytics snapshot created successfully"));
+  return ApiResponse.created(res, snapshot, "Analytics snapshot created successfully");
 });
 
 const deleteSnapshot = asyncHandler(async (req, res) => {
@@ -67,7 +68,7 @@ const deleteSnapshot = asyncHandler(async (req, res) => {
     snapshotId: req.params.snapshotId,
   });
 
-  return res.status(200).json(new ApiResponse(200, snapshot, "Analytics snapshot deleted successfully"));
+  return ApiResponse.success(res, snapshot, "Analytics snapshot deleted successfully");
 });
 
 module.exports = {

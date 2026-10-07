@@ -214,14 +214,8 @@ const processAutomation = async (automation, payload, event, options = {}) => {
   if (!automation || (automation.status !== "ACTIVE" && !options.manual)) return { status: "SKIPPED", reason: "inactive" };
   if (!options.manual && automation.trigger.mode !== "EVENT") return { status: "SKIPPED", reason: "not_event_trigger" };
   if (!options.manual && automation.trigger.mode === "EVENT" && `${automation.trigger.entity}.${automation.trigger.event}` !== String(event).toLowerCase()) return { status: "SKIPPED", reason: "event_mismatch" };
-
-  // A support-form lead is a special lead subtype. Do not let an
-  // unconditional generic lead.created automation also process it.
-  // Support automations must explicitly target isSupportTicket=true.
-  const isSupportTicketLead = String(payload.entity || "").toLowerCase() === "lead" &&
-    String(event || "").toLowerCase() === "lead.created" &&
-    (payload.record?.customFields?._leadGeneration?.isSupportTicket === true ||
-      String(payload.record?.customFields?._leadGeneration?.isSupportTicket).toLowerCase() === "true");
+  const isSupportTicketLead =
+    String(payload.entity || "").toLowerCase() === "lead" && String(event || "").toLowerCase() === "lead.created" && (payload.record?.customFields?._leadGeneration?.isSupportTicket === true || String(payload.record?.customFields?._leadGeneration?.isSupportTicket).toLowerCase() === "true");
   if (isSupportTicketLead) {
     const explicitSupportCondition = (automation.conditions || []).some((condition) => {
       const field = String(condition?.field || "").toLowerCase();
@@ -261,7 +255,9 @@ const processAutomation = async (automation, payload, event, options = {}) => {
         execution.durationMs = Date.now() - startedAt.getTime();
         execution.actionResults = results.concat([{ type: action.type, status: "SCHEDULED", delaySeconds: action.delaySeconds }]);
         await execution.save();
-        await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload.automationDepth || 0) + 1 }, () => Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } }));
+        await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload.automationDepth || 0) + 1 }, () =>
+          Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } })
+        );
         return { status: "SUCCESS", executionId: execution._id, scheduled: true };
       }
       try {
@@ -283,7 +279,9 @@ const processAutomation = async (automation, payload, event, options = {}) => {
     execution.completedAt = new Date();
     execution.durationMs = Date.now() - startedAt.getTime();
     await execution.save();
-    await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload.automationDepth || 0) + 1 }, () => Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, ...(failed ? { "stats.failedRuns": 1 } : { "stats.successRuns": 1 }) }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: failed ? "FAILED" : "SUCCESS", lastExecutionError: execution.error } }));
+    await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload.automationDepth || 0) + 1 }, () =>
+      Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, ...(failed ? { "stats.failedRuns": 1 } : { "stats.successRuns": 1 }) }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: failed ? "FAILED" : "SUCCESS", lastExecutionError: execution.error } })
+    );
     await publish(`automation.${payload.entity || automation.trigger.entity}.${automation.trigger.event}`, {
       businessId: payload.businessId,
       entity: payload.entity,
@@ -300,7 +298,9 @@ const processAutomation = async (automation, payload, event, options = {}) => {
     execution.completedAt = new Date();
     execution.durationMs = Date.now() - startedAt.getTime();
     await execution.save();
-    await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload.automationDepth || 0) + 1 }, () => Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, "stats.failedRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "FAILED", lastExecutionError: error.message } }));
+    await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload.automationDepth || 0) + 1 }, () =>
+      Automation.updateOne({ _id: automation._id }, { $inc: { "stats.totalRuns": 1, "stats.failedRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "FAILED", lastExecutionError: error.message } })
+    );
     return { status: "FAILED", executionId: execution._id, error: error.message };
   }
 };
@@ -314,9 +314,7 @@ const processEvent = async (payload, event) => {
     if (Number(payload.automationDepth || 0) >= 5) continue;
     try {
       await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload.automationDepth || 0) + 1 }, () => processAutomation(automation, payload, event));
-    } catch (error) {
-      console.error(`Automation ${automation._id} failed:`, error.message);
-    }
+    } catch (error) {}
   }
 };
 const runScheduledAutomations = async (limit = 25) => {
@@ -351,6 +349,8 @@ const continueAutomation = async ({ automationId, executionId, payload, event, a
   execution.durationMs = execution.completedAt.getTime() - execution.startedAt.getTime();
   execution.status = "SUCCESS";
   await execution.save();
-  await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload?.automationDepth || 0) + 1 }, () => Automation.updateOne({ _id: automation._id }, { $inc: { "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } }));
+  await runWithAutomationContext({ automationId: automation._id.toString(), depth: Number(payload?.automationDepth || 0) + 1 }, () =>
+    Automation.updateOne({ _id: automation._id }, { $inc: { "stats.successRuns": 1 }, $set: { lastExecutedAt: new Date(), lastExecutionStatus: "SUCCESS", lastExecutionError: null } })
+  );
 };
 module.exports = { processEvent, processAutomation, runScheduledAutomations, continueAutomation, executeAction };

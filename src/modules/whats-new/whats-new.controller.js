@@ -3,22 +3,10 @@ const ApiResponse = require("../../utils/ApiResponse");
 
 const whatsNewService = require("./whats-new.service");
 
-/*
- * ============================================================
- * HELPERS
- * ============================================================
- */
-
 const parseRequestData = (body = {}) => {
   const data = {
     ...body,
   };
-
-  /*
-   * ----------------------------------------------------------
-   * Boolean fields
-   * ----------------------------------------------------------
-   */
 
   const booleanFields = ["videoMuted", "videoAutoplay", "videoLoop"];
 
@@ -31,12 +19,6 @@ const parseRequestData = (body = {}) => {
       data[field] = false;
     }
   });
-
-  /*
-   * ----------------------------------------------------------
-   * Features
-   * ----------------------------------------------------------
-   */
 
   if (data.features !== undefined && typeof data.features === "string") {
     const value = data.features.trim();
@@ -64,12 +46,6 @@ const parseRequestData = (body = {}) => {
     }
   }
 
-  /*
-   * ----------------------------------------------------------
-   * Numeric fields
-   * ----------------------------------------------------------
-   */
-
   if (data.sortOrder !== undefined && data.sortOrder !== "") {
     const parsedSortOrder = Number(data.sortOrder);
 
@@ -77,12 +53,6 @@ const parseRequestData = (body = {}) => {
       data.sortOrder = parsedSortOrder;
     }
   }
-
-  /*
-   * ----------------------------------------------------------
-   * Empty optional values
-   * ----------------------------------------------------------
-   */
 
   const nullableFields = ["version", "releaseDate", "videoUrl", "imageUrl", "actionText", "actionUrl", "description", "howToUse"];
 
@@ -92,24 +62,9 @@ const parseRequestData = (body = {}) => {
     }
   });
 
-  /*
-   * ----------------------------------------------------------
-   * IMAGE URL
-   * ----------------------------------------------------------
-   *
-   * Cloudinary / any public image URL directly save hoga.
-   * ----------------------------------------------------------
-   */
-
   if (data.imageUrl !== undefined && data.imageUrl !== null) {
     data.imageUrl = String(data.imageUrl).trim();
   }
-
-  /*
-   * ----------------------------------------------------------
-   * MEDIA MODE
-   * ----------------------------------------------------------
-   */
 
   if (data.mediaType === "NONE") {
     data.imageUrl = null;
@@ -127,16 +82,6 @@ const parseRequestData = (body = {}) => {
   return data;
 };
 
-/*
- * ============================================================
- * PUBLIC
- * ============================================================
- */
-
-/*
- * GET /api/v1/whatsnew
- */
-
 const getPublicWhatsNew = asyncHandler(async (req, res) => {
   const result = await whatsNewService.getPublicWhatsNew({
     type: req.query.type,
@@ -147,25 +92,11 @@ const getPublicWhatsNew = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, result, "What's New items fetched successfully");
 });
 
-/*
- * GET /api/v1/whatsnew/slug/:slug
- */
-
 const getPublicWhatsNewBySlug = asyncHandler(async (req, res) => {
   const item = await whatsNewService.getPublicWhatsNewBySlug(req.params.slug);
 
   return ApiResponse.success(res, item, "What's New item fetched successfully");
 });
-
-/*
- * ============================================================
- * ADMIN
- * ============================================================
- */
-
-/*
- * POST /api/v1/whatsnew/admin
- */
 
 const createWhatsNew = asyncHandler(async (req, res) => {
   const data = parseRequestData(req.body);
@@ -177,10 +108,6 @@ const createWhatsNew = asyncHandler(async (req, res) => {
 
   return ApiResponse.created(res, item, "What's New item created successfully");
 });
-
-/*
- * GET /api/v1/whatsnew/admin
- */
 
 const getAllWhatsNew = asyncHandler(async (req, res) => {
   const result = await whatsNewService.getAllWhatsNew({
@@ -194,19 +121,11 @@ const getAllWhatsNew = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, result, "What's New items fetched successfully");
 });
 
-/*
- * GET /api/v1/whatsnew/admin/:whatsNewId
- */
-
 const getWhatsNewById = asyncHandler(async (req, res) => {
   const item = await whatsNewService.getWhatsNewById(req.params.whatsNewId);
 
   return ApiResponse.success(res, item, "What's New item fetched successfully");
 });
-
-/*
- * PATCH /api/v1/whatsnew/admin/:whatsNewId
- */
 
 const updateWhatsNew = asyncHandler(async (req, res) => {
   const data = parseRequestData(req.body);
@@ -220,10 +139,6 @@ const updateWhatsNew = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, item, "What's New item updated successfully");
 });
 
-/*
- * PATCH /api/v1/whatsnew/admin/:whatsNewId/status
- */
-
 const updateStatus = asyncHandler(async (req, res) => {
   const item = await whatsNewService.updateStatus({
     whatsNewId: req.params.whatsNewId,
@@ -234,13 +149,6 @@ const updateStatus = asyncHandler(async (req, res) => {
   return ApiResponse.success(res, item, "What's New status updated successfully");
 });
 
-/*
- * DELETE /api/v1/whatsnew/admin/:whatsNewId
- *
- * Backend actual delete nahi karta.
- * Item ko ARCHIVED karta hai.
- */
-
 const deleteWhatsNew = asyncHandler(async (req, res) => {
   const item = await whatsNewService.deleteWhatsNew({
     whatsNewId: req.params.whatsNewId,
@@ -249,12 +157,6 @@ const deleteWhatsNew = asyncHandler(async (req, res) => {
 
   return ApiResponse.success(res, item, "What's New item archived successfully");
 });
-
-/*
- * ============================================================
- * EXPORTS
- * ============================================================
- */
 
 module.exports = {
   getPublicWhatsNew,

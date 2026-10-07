@@ -198,9 +198,6 @@ const meetingSchema = new mongoose.Schema(
   }
 );
 
-/*
- * Main calendar/list queries
- */
 meetingSchema.index({
   businessId: 1,
   startAt: 1,

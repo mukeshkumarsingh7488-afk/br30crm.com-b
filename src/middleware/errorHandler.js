@@ -17,8 +17,6 @@ const errorHandler = (err, req, res, next) => {
     response.stack = err.stack;
   }
 
-  console.error(`[${req.requestId || "NO_REQUEST_ID"}]`, err);
-
   return res.status(statusCode).json(response);
 };
 

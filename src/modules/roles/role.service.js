@@ -6,11 +6,6 @@ const Permission = require("../permissions/permission.model");
 const Business = require("../businesses/business.model");
 const BusinessMember = require("../business-members/business-member.model");
 const permissionService = require("../permissions/permission.service");
-/*
- * ============================================================
- * VALIDATION
- * ============================================================
- */
 
 const validateObjectId = (id, fieldName = "ID") => {
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -55,12 +50,6 @@ const resolveRolePermissionIds = async (permissionIds, businessId, { dropInactiv
 
   return uniqueIds.filter((permissionId) => activeSet.has(permissionId));
 };
-
-/*
- * ============================================================
- * SYSTEM ROLE DEFINITIONS
- * ============================================================
- */
 
 const SYSTEM_ROLE_DEFINITIONS = [
   {
@@ -107,12 +96,6 @@ const SYSTEM_ROLE_DEFINITIONS = [
   },
 ];
 
-/*
- * ============================================================
- * NORMALIZE ROLE SLUG
- * ============================================================
- */
-
 const normalizeSlug = (value) => {
   return String(value || "")
     .trim()
@@ -121,12 +104,6 @@ const normalizeSlug = (value) => {
     .replace(/^-+|-+$/g, "")
     .replace(/-+/g, "-");
 };
-
-/*
- * ============================================================
- * GET ROLE BY ID
- * ============================================================
- */
 
 const getRoleById = async (roleId, businessId = null) => {
   validateObjectId(roleId, "role ID");
@@ -150,12 +127,6 @@ const getRoleById = async (roleId, businessId = null) => {
   return role;
 };
 
-/*
- * ============================================================
- * GET ROLE BY SLUG
- * ============================================================
- */
-
 const getRoleBySlug = async (slug, businessId = null) => {
   const normalizedSlug = normalizeSlug(slug);
 
@@ -175,28 +146,15 @@ const getRoleBySlug = async (slug, businessId = null) => {
   return role;
 };
 
-/*
- * ============================================================
- * ENSURE SYSTEM PERMISSIONS
- * ============================================================
- */
-
 const ensureSystemPermissions = async (createdBy) => {
   validateObjectId(createdBy, "creator ID");
 
-  /*
-   * Permission service owns the canonical
-   * SYSTEM_PERMISSIONS definitions and initializer.
-   */
   if (typeof permissionService.initializeSystemPermissions === "function") {
     return permissionService.initializeSystemPermissions({
       createdBy,
     });
   }
 
-  /*
-   * Backward compatibility.
-   */
   if (typeof permissionService.ensureSystemPermissions === "function") {
     return permissionService.ensureSystemPermissions(createdBy);
   }
@@ -208,12 +166,6 @@ const ensureSystemPermissions = async (createdBy) => {
   throw new ApiError(500, "System permission initializer is not available in permission service.");
 };
 
-/*
- * ============================================================
- * GET ALL ACTIVE SYSTEM PERMISSIONS
- * ============================================================
- */
-
 const getAllActiveSystemPermissions = async () => {
   return Permission.find({
     businessId: null,
@@ -221,12 +173,6 @@ const getAllActiveSystemPermissions = async () => {
     isActive: true,
   }).select("_id slug module action type businessId");
 };
-
-/*
- * ============================================================
- * ENSURE SYSTEM ROLE
- * ============================================================
- */
 
 const ensureSystemRole = async ({ definition, createdBy, permissions = [] }) => {
   validateObjectId(createdBy, "creator ID");
@@ -293,12 +239,6 @@ const ensureSystemRole = async ({ definition, createdBy, permissions = [] }) => 
   return role;
 };
 
-/*
- * ============================================================
- * CREATE / UPDATE SYSTEM ROLES
- * ============================================================
- */
-
 const ensureSystemRoles = async (createdBy) => {
   validateObjectId(createdBy, "creator ID");
 
@@ -311,13 +251,6 @@ const ensureSystemRoles = async (createdBy) => {
   for (const definition of SYSTEM_ROLE_DEFINITIONS) {
     let rolePermissions = permissionIds;
 
-    /*
-     * Business Owner receives every active system permission.
-     *
-     * Other system roles are kept with their existing permissions
-     * if they already exist. This prevents accidentally granting
-     * full access to every role.
-     */
     if (definition.slug !== "business-owner") {
       const existingRole = await Role.findOne({
         businessId: null,
@@ -337,9 +270,6 @@ const ensureSystemRoles = async (createdBy) => {
       permissions: rolePermissions,
     });
 
-    /*
-     * Business Owner must always have all active system permissions.
-     */
     if (definition.slug === "business-owner") {
       const currentPermissionIds = new Set((role.permissions || []).map((id) => String(id)));
 
@@ -352,9 +282,6 @@ const ensureSystemRoles = async (createdBy) => {
         }
       }
 
-      /*
-       * Remove deleted/inactive system permissions from owner role.
-       */
       const activePermissionIds = new Set(permissionIds.map((id) => String(id)));
 
       const cleanedPermissions = (role.permissions || []).filter((permissionId) => activePermissionIds.has(String(permissionId)));
@@ -376,23 +303,11 @@ const ensureSystemRoles = async (createdBy) => {
   return roles;
 };
 
-/*
- * ============================================================
- * GET BUSINESS OWNER ROLE
- * ============================================================
- */
-
 const getBusinessOwnerRole = async (createdBy) => {
   validateObjectId(createdBy, "creator ID");
 
-  /*
-   * Make sure Permission collection is initialized first.
-   */
   await ensureSystemPermissions(createdBy);
 
-  /*
-   * Make sure system roles exist.
-   */
   await ensureSystemRoles(createdBy);
 
   const ownerRole = await Role.findOne({
@@ -406,9 +321,6 @@ const getBusinessOwnerRole = async (createdBy) => {
     throw new ApiError(500, "Business Owner role could not be initialized.");
   }
 
-  /*
-   * Always synchronize Business Owner permissions.
-   */
   const permissions = await getAllActiveSystemPermissions();
 
   const permissionIds = permissions.map((permission) => permission._id);
@@ -441,28 +353,7 @@ const getBusinessOwnerRole = async (createdBy) => {
   return Role.findById(ownerRole._id).populate("permissions");
 };
 
-/*
- * ============================================================
- * REPAIR ACCESS CONTROL
- * ============================================================
- *
- * This repairs existing businesses after permissions / roles
- * were created after the business itself.
- *
- * It does NOT modify custom roles.
- * It only repairs:
- *
- * - system permissions
- * - Business Owner system role
- * - business owner membership
- * ============================================================
- */
-
 const repairAccessControl = async (createdBy = null) => {
-  /*
-   * If no user is supplied, use the first active user who can
-   * safely become createdBy for system records.
-   */
   if (!createdBy) {
     const User = require("../users/user.model");
 
@@ -479,28 +370,12 @@ const repairAccessControl = async (createdBy = null) => {
 
   validateObjectId(createdBy, "creator ID");
 
-  /*
-   * STEP 1
-   * Ensure all system permissions exist.
-   */
   await ensureSystemPermissions(createdBy);
 
-  /*
-   * STEP 2
-   * Ensure all system roles exist.
-   */
   await ensureSystemRoles(createdBy);
 
-  /*
-   * STEP 3
-   * Get Business Owner role.
-   */
   const ownerRole = await getBusinessOwnerRole(createdBy);
 
-  /*
-   * STEP 4
-   * Repair every active business owner membership.
-   */
   const businesses = await Business.find({
     ownerId: { $ne: null },
   }).select("_id ownerId status");
@@ -567,12 +442,6 @@ const repairAccessControl = async (createdBy = null) => {
   };
 };
 
-/*
- * ============================================================
- * CREATE CUSTOM ROLE
- * ============================================================
- */
-
 const createRole = async ({ name, slug, description = null, businessId, permissions = [], isDefault = false, createdBy }) => {
   validateObjectId(businessId, "business ID");
   validateObjectId(createdBy, "creator ID");
@@ -634,12 +503,6 @@ const createRole = async ({ name, slug, description = null, businessId, permissi
   return getRoleById(role._id);
 };
 
-/*
- * ============================================================
- * GET ROLES BY BUSINESS
- * ============================================================
- */
-
 const getRolesByBusiness = async (businessId, { activeOnly = false } = {}) => {
   validateObjectId(businessId, "business ID");
 
@@ -656,17 +519,6 @@ const getRolesByBusiness = async (businessId, { activeOnly = false } = {}) => {
     name: 1,
   });
 };
-
-/*
- * ============================================================
- * GET AVAILABLE ROLES FOR BUSINESS
- * ============================================================
- *
- * Returns:
- * - system roles
- * - custom roles belonging to the business
- * ============================================================
- */
 
 const getAvailableRolesForBusiness = async (businessId, { activeOnly = true } = {}) => {
   validateObjectId(businessId, "business ID");
@@ -695,12 +547,6 @@ const getAvailableRolesForBusiness = async (businessId, { activeOnly = true } = 
   });
 };
 
-/*
- * ============================================================
- * UPDATE ROLE
- * ============================================================
- */
-
 const updateRole = async (roleId, updates, updatedBy, businessId = null) => {
   validateObjectId(roleId, "role ID");
   validateObjectId(updatedBy, "updater ID");
@@ -717,9 +563,6 @@ const updateRole = async (roleId, updates, updatedBy, businessId = null) => {
     throw new ApiError(404, "Role not found.");
   }
 
-  /*
-   * System roles are protected.
-   */
   if (role.type === "SYSTEM") {
     throw new ApiError(400, "System roles cannot be modified.");
   }
@@ -768,20 +611,6 @@ const updateRole = async (roleId, updates, updatedBy, businessId = null) => {
         validateObjectId(permissionId, "permission ID");
       }
 
-      /*
-       * Resolve all requested permissions first, regardless of active
-       * status. This is important when a permission was deactivated
-       * after it had already been assigned to the role.
-       *
-       * - Unknown / foreign-business permission -> reject.
-       * - Inactive permission -> remove it from the role.
-       * - Active permission -> keep it.
-       */
-      /*
-       * Unknown/foreign permissions are rejected. Permissions that are
-       * inactive for this business are silently removed from the role.
-       * SYSTEM permission activity is business-scoped.
-       */
       role.permissions = await resolveRolePermissionIds(permissionIds, role.businessId, { dropInactive: true });
       continue;
     }
@@ -795,12 +624,6 @@ const updateRole = async (roleId, updates, updatedBy, businessId = null) => {
 
   return getRoleById(role._id);
 };
-
-/*
- * ============================================================
- * DELETE / DEACTIVATE ROLE
- * ============================================================
- */
 
 const deleteRole = async (roleId, deletedBy, businessId = null) => {
   validateObjectId(roleId, "role ID");
@@ -822,10 +645,6 @@ const deleteRole = async (roleId, deletedBy, businessId = null) => {
     throw new ApiError(400, "System roles cannot be deleted.");
   }
 
-  /*
-   * Do not delete physically.
-   * Deactivate the role so historical memberships remain valid.
-   */
   const assignedMember = await BusinessMember.exists({
     businessId: role.businessId,
     roleId: role._id,
@@ -842,12 +661,6 @@ const deleteRole = async (roleId, deletedBy, businessId = null) => {
 
   return role;
 };
-
-/*
- * ============================================================
- * ASSIGN PERMISSIONS TO ROLE
- * ============================================================
- */
 
 const assignPermissions = async (roleId, permissionIds, updatedBy) => {
   validateObjectId(roleId, "role ID");
@@ -880,12 +693,6 @@ const assignPermissions = async (roleId, permissionIds, updatedBy) => {
 
   return getRoleById(role._id);
 };
-
-/*
- * ============================================================
- * ADD PERMISSIONS TO ROLE
- * ============================================================
- */
 
 const addPermissionsToRole = async (roleId, permissionIds, updatedBy) => {
   validateObjectId(roleId, "role ID");
@@ -922,12 +729,6 @@ const addPermissionsToRole = async (roleId, permissionIds, updatedBy) => {
   return getRoleById(role._id);
 };
 
-/*
- * ============================================================
- * REMOVE PERMISSIONS FROM ROLE
- * ============================================================
- */
-
 const removePermissionsFromRole = async (roleId, permissionIds, updatedBy) => {
   validateObjectId(roleId, "role ID");
   validateObjectId(updatedBy, "updater ID");
@@ -956,12 +757,6 @@ const removePermissionsFromRole = async (roleId, permissionIds, updatedBy) => {
 
   return getRoleById(role._id);
 };
-
-/*
- * ============================================================
- * EXPORTS
- * ============================================================
- */
 
 module.exports = {
   validateObjectId,

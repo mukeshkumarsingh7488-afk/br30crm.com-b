@@ -1,1 +1,15 @@
-const express=require("express");const auth=require("../../middleware/auth");const validate=require("../../middleware/validation");const {requireBusinessMembership}=require("../../middleware/authorization");const {requirePermission}=require("../../middleware/permission");const c=require("./subscription.controller");const v=require("./subscription.validator");const r=express.Router();r.get("/plans",c.plans);r.post("/paytm/callback",c.callback);r.use(auth);r.get("/business/:businessId/current",v.business,validate,requireBusinessMembership,requirePermission("settings.view"),c.current);r.post("/business/:businessId/checkout",v.checkout,validate,requireBusinessMembership,requirePermission("settings.update"),c.checkout);r.get("/business/:businessId/payment/:orderId",v.status,validate,requireBusinessMembership,requirePermission("settings.view"),c.status);module.exports=r;
+const express = require("express");
+const auth = require("../../middleware/auth");
+const validate = require("../../middleware/validation");
+const { requireBusinessMembership } = require("../../middleware/authorization");
+const { requirePermission } = require("../../middleware/permission");
+const c = require("./subscription.controller");
+const v = require("./subscription.validator");
+const r = express.Router();
+r.get("/plans", c.plans);
+r.post("/paytm/callback", c.callback);
+r.use(auth);
+r.get("/business/:businessId/current", v.business, validate, requireBusinessMembership, requirePermission("settings.view"), c.current);
+r.post("/business/:businessId/checkout", v.checkout, validate, requireBusinessMembership, requirePermission("settings.update"), c.checkout);
+r.get("/business/:businessId/payment/:orderId", v.status, validate, requireBusinessMembership, requirePermission("settings.view"), c.status);
+module.exports = r;

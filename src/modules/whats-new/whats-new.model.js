@@ -146,9 +146,6 @@ const whatsNewSchema = new mongoose.Schema(
   }
 );
 
-/*
- * Public listing index
- */
 whatsNewSchema.index({
   status: 1,
   releaseDate: -1,
@@ -156,9 +153,6 @@ whatsNewSchema.index({
   createdAt: -1,
 });
 
-/*
- * Admin filtering index
- */
 whatsNewSchema.index({
   status: 1,
   type: 1,
@@ -166,9 +160,6 @@ whatsNewSchema.index({
   releaseDate: -1,
 });
 
-/*
- * Search index
- */
 whatsNewSchema.index({
   title: "text",
   shortDescription: "text",

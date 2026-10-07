@@ -274,9 +274,6 @@ const calendarSchema = new mongoose.Schema(
   }
 );
 
-/*
- * Main calendar date query
- */
 calendarSchema.index({
   businessId: 1,
   startAt: 1,
@@ -284,9 +281,6 @@ calendarSchema.index({
   isDeleted: 1,
 });
 
-/*
- * Business + organizer + date
- */
 calendarSchema.index({
   businessId: 1,
   organizerId: 1,
@@ -294,9 +288,6 @@ calendarSchema.index({
   isDeleted: 1,
 });
 
-/*
- * Business + status + date
- */
 calendarSchema.index({
   businessId: 1,
   status: 1,
@@ -304,35 +295,23 @@ calendarSchema.index({
   isDeleted: 1,
 });
 
-/*
- * Business + source + external event
- */
 calendarSchema.index({
   businessId: 1,
   source: 1,
   externalEventId: 1,
 });
 
-/*
- * External account sync lookup
- */
 calendarSchema.index({
   externalAccountId: 1,
   externalEventId: 1,
 });
 
-/*
- * Related CRM record lookup
- */
 calendarSchema.index({
   businessId: 1,
   "relatedTo.type": 1,
   "relatedTo.id": 1,
 });
 
-/*
- * Recent calendar events
- */
 calendarSchema.index({
   businessId: 1,
   createdAt: -1,

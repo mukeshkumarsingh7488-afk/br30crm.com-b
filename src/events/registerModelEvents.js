@@ -9,15 +9,7 @@ const toId = (value) => {
 
 const getUpdateActor = (query, requestContext) => {
   const update = query?.getUpdate?.() || {};
-  return toId(
-    update?.updatedBy ||
-      update?.$set?.updatedBy ||
-      update?.$setOnInsert?.updatedBy ||
-      update?.createdBy ||
-      update?.$set?.createdBy ||
-      update?.$setOnInsert?.createdBy ||
-      requestContext?.userId
-  );
+  return toId(update?.updatedBy || update?.$set?.updatedBy || update?.$setOnInsert?.updatedBy || update?.createdBy || update?.$set?.createdBy || update?.$setOnInsert?.createdBy || requestContext?.userId);
 };
 
 const buildPayload = ({ entity, record, before = null, actorId = null, automationContext = null }) => ({
@@ -48,9 +40,7 @@ const emitRecordEvents = async ({ entity, record, before = null, actorId = null,
 
   const statusChanged = before.status !== record.status && record.status !== undefined;
   const stageChanged = before.stageId?.toString?.() !== record.stageId?.toString?.() && record.stageId !== undefined;
-  const assignmentChanged =
-    before.assignedTo?.toString?.() !== record.assignedTo?.toString?.() ||
-    before.assignedTeamId?.toString?.() !== record.assignedTeamId?.toString?.();
+  const assignmentChanged = before.assignedTo?.toString?.() !== record.assignedTo?.toString?.() || before.assignedTeamId?.toString?.() !== record.assignedTeamId?.toString?.();
 
   const changeFlags = { statusChanged, stageChanged, assignmentChanged };
 
@@ -94,9 +84,7 @@ const registerModelEvents = (schema, entity) => {
           automationContext,
         });
       })
-      .catch((error) => {
-        console.error(`Model event error (${entity}):`, error.message);
-      });
+      .catch((error) => {});
   });
 
   const captureQueryBefore = async function () {
@@ -119,9 +107,7 @@ const registerModelEvents = (schema, entity) => {
 
         const automationContext = getAutomationContext();
         const requestContext = getRequestContext();
-        const actorId =
-          getUpdateActor(this, requestContext) ||
-          toId(record.updatedBy || record.createdBy || null);
+        const actorId = getUpdateActor(this, requestContext) || toId(record.updatedBy || record.createdBy || null);
 
         await emitRecordEvents({
           entity,
@@ -131,9 +117,7 @@ const registerModelEvents = (schema, entity) => {
           automationContext,
         });
       })
-      .catch((error) => {
-        console.error(`Model query event error (${entity}):`, error.message);
-      });
+      .catch((error) => {});
   };
 
   schema.pre("findOneAndUpdate", captureQueryBefore);
@@ -153,9 +137,7 @@ const registerModelEvents = (schema, entity) => {
 
         await publish(`${entity}.deleted`, buildPayload({ entity, record, before: record, actorId, automationContext }));
       })
-      .catch((error) => {
-        console.error(`Model delete event error (${entity}):`, error.message);
-      });
+      .catch((error) => {});
   });
 };
 

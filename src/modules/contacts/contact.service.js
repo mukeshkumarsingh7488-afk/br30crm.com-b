@@ -72,19 +72,6 @@ const verifyTeam = async (businessId, teamId) => {
   return team;
 };
 
-/*
- * ============================================================
- * COMPANY RELATIONSHIP VALIDATION
- * ============================================================
- *
- * Contact can only be linked to:
- * - a company inside the same business
- * - an ACTIVE company
- *
- * This prevents cross-business relationships and prevents
- * contacts from being attached to inactive companies.
- * ============================================================
- */
 const verifyCompany = async (businessId, companyId) => {
   validateObjectId(businessId, "business ID");
   validateObjectId(companyId, "company ID");
@@ -102,18 +89,6 @@ const verifyCompany = async (businessId, companyId) => {
   return company;
 };
 
-/*
- * ============================================================
- * LEAD RELATIONSHIP VALIDATION
- * ============================================================
- *
- * sourceLeadId must always point to a Lead belonging to the
- * same business.
- *
- * This protects the tenant boundary and prevents a Contact
- * from referencing a Lead from another business.
- * ============================================================
- */
 const verifyLead = async (businessId, leadId) => {
   validateObjectId(businessId, "business ID");
   validateObjectId(leadId, "lead ID");
@@ -130,20 +105,6 @@ const verifyLead = async (businessId, leadId) => {
   return lead;
 };
 
-/*
- * ============================================================
- * COMPANY RELATIONSHIP RESOLVER
- * ============================================================
- *
- * Passing null / empty value:
- * - removes company relationship
- *
- * Passing company ID:
- * - verifies same business
- * - verifies company is ACTIVE
- * - returns company document
- * ============================================================
- */
 const resolveCompany = async (businessId, companyId) => {
   if (!companyId) {
     return null;
@@ -152,11 +113,6 @@ const resolveCompany = async (businessId, companyId) => {
   return verifyCompany(businessId, companyId);
 };
 
-/*
- * ============================================================
- * CREATE CONTACT
- * ============================================================
- */
 const createContact = async ({ businessId, firstName, lastName, email, phone, alternatePhone, jobTitle, companyId, source, status, lifecycleStage, description, address, assignedTo, assignedTeamId, tags, customFields, sourceLeadId, createdBy }) => {
   await getBusiness(businessId);
 
@@ -205,30 +161,6 @@ const createContact = async ({ businessId, firstName, lastName, email, phone, al
   return getContactByIdForBusiness(contact._id, businessId);
 };
 
-/*
- * ============================================================
- * GET CONTACTS BY BUSINESS
- * ============================================================
- *
- * Supports:
- * - pagination
- * - first/last name search
- * - email search
- * - phone search
- * - alternate phone search
- * - job title search
- * - company name search
- * - status filter
- * - lifecycle stage filter
- * - source filter
- * - company filter
- * - assigned user filter
- * - assigned team filter
- *
- * Company name search is resolved to company IDs first so that
- * the actual Contact query remains business-safe.
- * ============================================================
- */
 const getContactsByBusiness = async (businessId, { page = 1, limit = 10, search, status, lifecycleStage, source, companyId, assignedTo, assignedTeamId, access } = {}) => {
   await getBusiness(businessId);
 
@@ -254,15 +186,6 @@ const getContactsByBusiness = async (businessId, { page = 1, limit = 10, search,
     filter.source = source.toLowerCase().trim();
   }
 
-  /*
-   * ----------------------------------------------------------
-   * Company filter
-   * ----------------------------------------------------------
-   *
-   * Always verify the selected company belongs to the same
-   * business and is active.
-   * ----------------------------------------------------------
-   */
   if (companyId) {
     validateObjectId(companyId, "company ID");
 
@@ -283,21 +206,6 @@ const getContactsByBusiness = async (businessId, { page = 1, limit = 10, search,
     filter.assignedTeamId = assignedTeamId;
   }
 
-  /*
-   * ----------------------------------------------------------
-   * Search
-   * ----------------------------------------------------------
-   *
-   * Search directly on Contact fields.
-   *
-   * For company name:
-   * 1. Search companies within this business only.
-   * 2. Get matching company IDs.
-   * 3. Include those IDs in Contact search.
-   *
-   * This avoids cross-business company matches.
-   * ----------------------------------------------------------
-   */
   if (search && search.trim()) {
     const searchValue = search.trim();
 
@@ -401,11 +309,6 @@ const getContactsByBusiness = async (businessId, { page = 1, limit = 10, search,
   };
 };
 
-/*
- * ============================================================
- * GET CONTACT BY ID
- * ============================================================
- */
 const getContactById = async (contactId) => {
   validateObjectId(contactId, "contact ID");
 
@@ -425,15 +328,6 @@ const getContactById = async (contactId) => {
   return contact;
 };
 
-/*
- * ============================================================
- * GET CONTACT BY ID FOR BUSINESS
- * ============================================================
- *
- * Business ID is always included in the query so that a
- * Contact from another business can never be returned.
- * ============================================================
- */
 const getContactByIdForBusiness = async (contactId, businessId, access = null) => {
   validateObjectId(contactId, "contact ID");
   validateObjectId(businessId, "business ID");
@@ -459,11 +353,6 @@ const getContactByIdForBusiness = async (contactId, businessId, access = null) =
   return contact;
 };
 
-/*
- * ============================================================
- * UPDATE CONTACT
- * ============================================================
- */
 const updateContact = async (contactId, businessId, updates, updatedBy, access = null) => {
   await getBusiness(businessId);
 
@@ -505,13 +394,6 @@ const updateContact = async (contactId, businessId, updates, updatedBy, access =
     contact.email = normalizeEmail(updates.email);
   }
 
-  /*
-   * Company relationship update.
-   *
-   * companyId:
-   * - valid ID → attach contact to company
-   * - null / empty → detach contact from company
-   */
   if (updates.companyId !== undefined) {
     const company = await resolveCompany(businessId, updates.companyId);
 
@@ -533,11 +415,6 @@ const updateContact = async (contactId, businessId, updates, updatedBy, access =
   return getContactByIdForBusiness(contactId, businessId);
 };
 
-/*
- * ============================================================
- * ASSIGN CONTACT
- * ============================================================
- */
 const assignContact = async (contactId, businessId, assignedTo, assignedTeamId, updatedBy, access = null) => {
   await getBusiness(businessId);
 
@@ -576,23 +453,6 @@ const assignContact = async (contactId, businessId, assignedTo, assignedTeamId, 
   return getContactByIdForBusiness(contactId, businessId);
 };
 
-/*
- * ============================================================
- * DELETE CONTACT
- * ============================================================
- *
- * IMPORTANT:
- *
- * If a Lead was converted into this Contact, the Lead keeps
- * convertedContactId pointing to the Contact.
- *
- * Deleting such a Contact would create a dangling Lead →
- * Contact reference.
- *
- * Therefore converted Contacts cannot be deleted directly.
- * The Lead conversion relationship remains consistent.
- * ============================================================
- */
 const deleteContact = async (contactId, businessId, deletedBy, access = null) => {
   await getBusiness(businessId);
 
@@ -610,15 +470,6 @@ const deleteContact = async (contactId, businessId, deletedBy, access = null) =>
 
   if (access) assertRecordAccess(contact, await resolveRecordAccess(businessId, access));
 
-  /*
-   * Check both sides of the Lead ↔ Contact relationship.
-   *
-   * 1. Contact.sourceLeadId
-   * 2. Lead.convertedContactId
-   *
-   * The second check is the important integrity protection
-   * for converted Leads.
-   */
   const linkedConvertedLead = await Lead.findOne({
     businessId,
     convertedContactId: contact._id,
