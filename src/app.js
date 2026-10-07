@@ -4,6 +4,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
+const mongoose = require("mongoose");
 
 const env = require("./config/env");
 const requestId = require("./middleware/requestId");
@@ -23,6 +24,7 @@ app.use(
       if (!origin || env.frontendUrls.includes(origin)) {
         return callback(null, true);
       }
+
       return callback(new Error("CORS origin is not allowed."));
     },
     credentials: true,
@@ -62,7 +64,7 @@ app.use(
 );
 
 app.get("/", (req, res) => {
-  return res.json({
+  return res.status(200).json({
     success: true,
     message: "BR30 CRM API is running",
     version: "v1",
@@ -71,12 +73,12 @@ app.get("/", (req, res) => {
 
 app.get("/health", async (req, res) => {
   try {
-    const mongoose = require("mongoose");
-
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
         success: false,
+        status: "unhealthy",
         message: "Database connection is not ready.",
+        database: "disconnected",
       });
     }
 
@@ -84,12 +86,18 @@ app.get("/health", async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      status: "healthy",
       message: "BR30 CRM API is healthy.",
+      database: "connected",
     });
-  } catch {
+  } catch (error) {
+    console.error("Health check failed:", error);
+
     return res.status(503).json({
       success: false,
+      status: "unhealthy",
       message: "Service is not healthy.",
+      database: "error",
     });
   }
 });
