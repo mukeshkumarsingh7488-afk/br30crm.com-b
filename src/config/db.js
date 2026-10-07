@@ -3,7 +3,15 @@ const env = require("./env");
 
 const connectDB = async () => {
   try {
-    const connection = await mongoose.connect(env.mongodbUri, { serverSelectionTimeoutMS: 10000, connectTimeoutMS: 10000, socketTimeoutMS: 20000 });
+    const connection = await mongoose.connect(env.mongodbUri, {
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
+      socketTimeoutMS: 30000,
+      maxPoolSize: 20,
+      minPoolSize: 1,
+      maxIdleTimeMS: 60000,
+      serverSelectionTryOnce: false,
+    });
   } catch (error) {
     process.exit(1);
   }

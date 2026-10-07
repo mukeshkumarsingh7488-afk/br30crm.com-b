@@ -69,6 +69,31 @@ app.get("/", (req, res) => {
   });
 });
 
+app.get("/health", async (req, res) => {
+  try {
+    const mongoose = require("mongoose");
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: "Database connection is not ready.",
+      });
+    }
+
+    await mongoose.connection.db.admin().ping();
+
+    return res.status(200).json({
+      success: true,
+      message: "BR30 CRM API is healthy.",
+    });
+  } catch {
+    return res.status(503).json({
+      success: false,
+      message: "Service is not healthy.",
+    });
+  }
+});
+
 app.use("/api/v1", routes);
 
 app.use(notFound);
