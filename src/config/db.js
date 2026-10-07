@@ -12,7 +12,6 @@ const connectDB = async () => {
       maxPoolSize: 20,
       minPoolSize: 1,
       maxIdleTimeMS: 60000,
-      serverSelectionTryOnce: false,
     });
 
     console.log(`MongoDB connected successfully to ${connection.connection.name}.`);
