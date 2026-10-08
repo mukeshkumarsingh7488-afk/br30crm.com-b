@@ -17,12 +17,20 @@ const create = async ({ userId, sessionId, refreshToken, deviceName, userAgent, 
     expiresAt,
   });
 
-const findByToken = async (token) =>
-  Session.findOne({
+const findByToken = async (token) => {
+  const session = await Session.findOne({
     tokenHash: hash(token),
     revokedAt: null,
     expiresAt: { $gt: new Date() },
   }).select("+tokenHash");
+
+  if (session) {
+    session.lastUsedAt = new Date();
+    await session.save();
+  }
+
+  return session;
+};
 
 const revoke = async ({ userId, sessionId }) => {
   const s = await Session.findOneAndUpdate(

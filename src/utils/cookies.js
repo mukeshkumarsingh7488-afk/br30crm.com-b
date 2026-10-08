@@ -11,7 +11,7 @@ const getRefreshCookieOptions = () => {
     httpOnly: true,
     secure: env.cookieSecure,
     sameSite: ["strict", "lax", "none"].includes(sameSite) ? sameSite : "lax",
-    maxAge: 24 * 60 * 60 * 1000,
+    maxAge: env.refreshCookieMaxAgeMs,
     path: "/",
   };
 };

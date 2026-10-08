@@ -37,7 +37,7 @@ const env = {
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
   jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "15m",
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "24h",
-
+  refreshCookieMaxAgeMs: Number(process.env.REFRESH_COOKIE_MAX_AGE_MS) || 24 * 60 * 60 * 1000,
   masterAdminUserId: process.env.MASTER_ADMIN_USER_ID.trim(),
 
   cookieSecure: process.env.COOKIE_SECURE === "true",
