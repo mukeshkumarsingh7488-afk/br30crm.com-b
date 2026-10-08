@@ -370,11 +370,25 @@ const repairAccessControl = async (createdBy = null) => {
 
   validateObjectId(createdBy, "creator ID");
 
+  console.log("Access control: ensuring system permissions...");
   await ensureSystemPermissions(createdBy);
 
+  console.log("Access control: ensuring system roles...");
   await ensureSystemRoles(createdBy);
 
-  const ownerRole = await getBusinessOwnerRole(createdBy);
+  console.log("Access control: loading Business Owner role...");
+  const ownerRole = await Role.findOne({
+    businessId: null,
+    slug: "business-owner",
+    type: "SYSTEM",
+    isActive: true,
+  });
+
+  if (!ownerRole) {
+    throw new ApiError(500, "Business Owner role could not be initialized.");
+  }
+
+  console.log("Access control: loading businesses...");
 
   const businesses = await Business.find({
     ownerId: { $ne: null },
